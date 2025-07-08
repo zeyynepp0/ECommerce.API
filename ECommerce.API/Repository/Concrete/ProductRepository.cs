@@ -25,5 +25,13 @@ namespace ECommerce.API.Repository.Concrete
                 .Where(p => p.Name.Contains(keyword) || p.Description.Contains(keyword))
                 .ToListAsync();
         }
+        public async Task<List<Product>> GetByCategoryIdAsync(int categoryId, int excludeProductId)
+        {
+            return await _context.Products
+                .Where(p => p.CategoryId == categoryId && p.Id != excludeProductId)
+                .ToListAsync();
+        }
+
+
     }
 }

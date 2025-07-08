@@ -40,5 +40,13 @@ namespace ECommerce.API.Controllers
             await _service.DeleteAsync(id);
             return Ok();
         }
+
+        [HttpGet("by-category")]
+        public async Task<IActionResult> GetByCategory([FromQuery] int categoryId ,[FromQuery] int excludeProductId)
+        {
+            var products = await _service.GetByCategoryIdAsync(categoryId,  excludeProductId);
+            return Ok(products);
+        }
+
     }
 } 

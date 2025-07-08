@@ -6,5 +6,8 @@ namespace ECommerce.API.Repository.Abstract
     {
         Task<List<Product>> GetProductsWithCategoryAsync();
         Task<List<Product>> GetFilteredAsync(string keyword);
+        Task<List<Product>> GetByCategoryIdAsync(int categoryId, int excludeProductId);
+
+
     }
 }

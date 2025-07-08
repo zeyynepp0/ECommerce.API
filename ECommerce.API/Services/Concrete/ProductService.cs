@@ -48,5 +48,10 @@ namespace ECommerce.API.Services.Concrete
                 await _repo.SaveAsync();
             }
         }
+        public async Task<List<Product>> GetByCategoryIdAsync(int categoryId, int excludeProductId)
+        {
+            return await _repo.GetByCategoryIdAsync(categoryId, excludeProductId);
+        }
+
     }
 }

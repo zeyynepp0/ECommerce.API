@@ -10,5 +10,7 @@ namespace ECommerce.API.Services.Abstract
         Task AddAsync(Product product);
         Task UpdateAsync(Product product);
         Task DeleteAsync(int id);
+        Task<List<Product>> GetByCategoryIdAsync(int categoryId ,int excludeProductId);
+
     }
 }
