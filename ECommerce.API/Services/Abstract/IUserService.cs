@@ -10,5 +10,7 @@ namespace ECommerce.API.Services.Abstract
         Task AddAsync(User user);
         Task UpdateAsync(User user);
         Task DeleteAsync(int id);
+        Task<User?> AuthenticateAsync(string email, string password);
+        Task UpdateRoleAsync(int userId, string role);
     }
 }

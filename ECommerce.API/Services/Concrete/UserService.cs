@@ -21,6 +21,15 @@ namespace ECommerce.API.Services.Concrete
 
         public async Task AddAsync(User user)
         {
+            // E-posta benzersizliği kontrolü
+            var existing = await _repo.GetByEmailAsync(user.Email);
+            if (existing != null)
+                throw new Exception("Bu e-posta ile zaten bir kullanıcı var.");
+            // Doğum tarihi kontrolü
+            if (user.BirthDate > DateTime.Now)
+                throw new Exception("Doğum tarihi bugünden ileri olamaz.");
+            // Şifre hash'leme
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(user.PasswordHash);
             await _repo.AddAsync(user);
             await _repo.SaveAsync();
         }
@@ -39,6 +48,24 @@ namespace ECommerce.API.Services.Concrete
                 _repo.Delete(user);
                 await _repo.SaveAsync();
             }
+        }
+
+        public async Task<User?> AuthenticateAsync(string email, string password)
+        {
+            var user = (await _repo.FindAsync(u => u.Email == email)).FirstOrDefault();
+            if (user == null) return null;
+            // BCrypt hash kontrolü
+            if (!BCrypt.Net.BCrypt.Verify(password, user.PasswordHash)) return null;
+            return user;
+        }
+
+        public async Task UpdateRoleAsync(int userId, string role)
+        {
+            var user = await _repo.GetByIdAsync(userId);
+            if (user == null) throw new Exception("User not found");
+            user.Role = Enum.Parse<UserRole>(role);
+            _repo.Update(user);
+            await _repo.SaveAsync();
         }
     }
 }

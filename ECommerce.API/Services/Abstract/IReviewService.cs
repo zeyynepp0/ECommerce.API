@@ -11,5 +11,7 @@ namespace ECommerce.API.Services.Abstract
         Task AddAsync(Review review);
         Task UpdateAsync(Review review);
         Task DeleteAsync(int id);
+        Task<List<Review>> GetByProductIdAsync(int productId);
+
     }
 }

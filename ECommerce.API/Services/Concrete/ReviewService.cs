@@ -43,5 +43,11 @@ namespace ECommerce.API.Services.Concrete
                 await _repo.SaveAsync();
             }
         }
+        
+        public async Task<List<Review>> GetByProductIdAsync(int productId)
+        {
+            return await _repo.GetReviewsByProductIdAsync(productId);
+        }
     }
+
 }

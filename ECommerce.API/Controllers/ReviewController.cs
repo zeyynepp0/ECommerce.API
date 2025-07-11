@@ -1,6 +1,7 @@
 using ECommerce.API.Entities.Concrete;
 using ECommerce.API.Services.Abstract;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace ECommerce.API.Controllers
 {
@@ -21,14 +22,14 @@ namespace ECommerce.API.Controllers
         public async Task<IActionResult> GetById(int id) => Ok(await _service.GetByIdAsync(id));
 
         [HttpPost]
-        public async Task<IActionResult> Add(Review review)
+        public async Task<IActionResult> Add([FromBody] Review review)
         {
             await _service.AddAsync(review);
-            return Ok();
+            return Ok(review);
         }
 
         [HttpPut]
-        public async Task<IActionResult> Update(Review review)
+        public async Task<IActionResult> Update([FromBody] Review review)
         {
             await _service.UpdateAsync(review);
             return Ok();
@@ -40,5 +41,12 @@ namespace ECommerce.API.Controllers
             await _service.DeleteAsync(id);
             return Ok();
         }
+
+        [HttpGet("by-product")]
+        public async Task<IActionResult> GetReviewsByProduct([FromQuery] int productId)
+        {
+            var reviews = await _service.GetByProductIdAsync(productId);
+            return Ok(reviews);
+        }
     }
-} 
+}

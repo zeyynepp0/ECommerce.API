@@ -7,7 +7,7 @@
         public int ProductId { get; set; }
         public int Quantity { get; set; }
         public decimal UnitPrice { get; set; }
-        public Order Order { get; set; }// FK to Order (Cascade)
-        public Product Product { get; set; } // FK to Product (Restrict)
+        public Order Order { get; set; } = null!; // FK to Order (Cascade)
+        public Product Product { get; set; } = null!; // FK to Product (Restrict)
     }
 }

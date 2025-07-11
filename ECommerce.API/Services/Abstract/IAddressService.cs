@@ -9,5 +9,7 @@ namespace ECommerce.API.Services.Abstract
         Task AddAsync(Address address);
         Task UpdateAsync(Address address);
         Task DeleteAsync(int id);
+        Task UpdateUserAddressAsync(int userId, Address address);
+        Task<List<Address>> GetAddressesByUserIdAsync(int userId);
     }
 }

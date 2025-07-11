@@ -10,5 +10,12 @@
         public DateTime CreatedAt { get; set; }
         public Product Product { get; set; } // FK to Product(Cascade)
         public User User { get; set; }       // FK to User (Restrict)
+
+        public Review()
+        {
+            Comment = string.Empty;
+            Product = new Product();
+            User = new User();
+        }
     }
 }

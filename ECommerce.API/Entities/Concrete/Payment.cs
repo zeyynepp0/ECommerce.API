@@ -8,5 +8,12 @@
         public string PaymentStatus { get; set; }
         public DateTime PaymentDate { get; set; }
         public Order Order { get; set; } // 1 Order : 1 Payment (Cascade)
+
+        public Payment()
+        {
+            PaymentMethod = string.Empty;
+            PaymentStatus = string.Empty;
+            Order = new Order();
+        }
     }
 }

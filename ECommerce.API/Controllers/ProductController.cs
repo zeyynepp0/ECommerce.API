@@ -48,5 +48,17 @@ namespace ECommerce.API.Controllers
             return Ok(products);
         }
 
+        
+        [HttpGet("related/{id}")]
+        public async Task<IActionResult> GetRelatedProducts(int id)
+        {
+            var product = await _service.GetByIdAsync(id);
+            if (product == null) return NotFound();
+
+            var related = await _service.GetByCategoryIdAsync(product.CategoryId, product.Id);
+            return Ok(related);
+        }
+
+
     }
 } 

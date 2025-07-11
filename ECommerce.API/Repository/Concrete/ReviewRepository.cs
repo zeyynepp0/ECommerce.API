@@ -20,5 +20,6 @@ namespace ECommerce.API.Repository.Concrete
                 .Where(r => r.ProductId == productId)
                 .ToListAsync();
         }
+
     }
 }
