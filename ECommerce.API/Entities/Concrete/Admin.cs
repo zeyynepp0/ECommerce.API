@@ -4,15 +4,24 @@ using ECommerce.API.Entities.Abstract;
 
 namespace ECommerce.API.Entities.Concrete
 {
-    public class Admin :IEntity
+    
+    /// Sistemdeki yönetici kullanıcıları temsil eden entity.
+   
+    public class Admin
     {
-         public int AdminId { get; set; }
-         public int UserId { get; set; } // User tablosu ile ilişki
-         public User User { get; set; }
+        
+        /// Yöneticinin benzersiz kimliği.
+       
+        public int AdminId { get; set; }
 
-        public Admin()
-        {
-            User = new User();
-        }
+        
+        /// Yöneticinin bağlı olduğu kullanıcı kimliği (FK).
+       
+        public int UserId { get; set; } // User tablosu ile ilişki
+
+        
+        /// Yöneticinin bağlı olduğu kullanıcı nesnesi (navigation property).
+       
+        public User User { get; set; } = null!;
     }
 }

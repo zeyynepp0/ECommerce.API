@@ -1,156 +1,168 @@
-﻿using ECommerce.API.Entities.Concrete;
-using ECommerce.API.Repository.Abstract;
-using ECommerce.API.Services.Abstract;
-using ECommerce.API.DTO;
-using ECommerce.API.Data;
-using Microsoft.EntityFrameworkCore;
+﻿// Sipariş servisinin iş mantığı ve gerekli kütüphaneler
+using ECommerce.API.Entities.Concrete; // Sipariş varlık sınıfı
+using ECommerce.API.Repository.Abstract; // Sipariş repository arayüzü
+using ECommerce.API.Services.Abstract; // Sipariş servis arayüzü
+using ECommerce.API.DTO; // DTO sınıfları
+using ECommerce.API.Data; // Veritabanı context'i
+using Microsoft.EntityFrameworkCore; // Entity Framework işlemleri için
 
 namespace ECommerce.API.Services.Concrete
 {
+    // Siparişlerle ilgili iş mantığını yöneten servis sınıfı
     public class OrderService : IOrderService
     {
+        // Sipariş repository'si (veri erişim katmanı)
         private readonly IOrderRepository _repo;
+        // Veritabanı context'i (transaction işlemleri için)
         private readonly MyDbContext _context;
 
+        // OrderService constructor: Repository ve context bağımlılıklarını enjekte eder
         public OrderService(IOrderRepository repo, MyDbContext context)
         {
-            _repo = repo;
-            _context = context;
+            _repo = repo; // Repository'yi ata
+            _context = context; // Context'i ata
         }
 
-        public async Task<List<Order>> GetAllAsync() => await _repo.GetAllAsync();
+        // Tüm siparişleri getirir
+        public async Task<List<Order>> GetAllAsync() => await _repo.GetAllAsync(); // Repository'den tüm siparişleri getir
 
-        public async Task<Order> GetByIdAsync(int id) => await _repo.GetByIdAsync(id);
+        // Id'ye göre siparişi getirir
+        public async Task<Order> GetByIdAsync(int id) => await _repo.GetByIdAsync(id); // Repository'den siparişi getir
 
-        public async Task<List<Order>> GetOrdersByUserIdAsync(int userId)
+        // Belirli bir kullanıcıya ait siparişleri, detaylarıyla birlikte getirir
+        public async Task<List<OrderDto>> GetOrdersByUserIdAsync(int userId)
         {
-            return await _context.Orders
+            var orders = await _context.Orders
                 .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Product)
                 .Include(o => o.Address)
                 .Where(o => o.UserId == userId)
                 .OrderByDescending(o => o.OrderDate)
                 .ToListAsync();
+
+            // Entity -> DTO mapping
+            return orders.Select(o => new OrderDto
+            {
+                Id = o.Id,
+                UserId = o.UserId,
+                AddressId = o.AddressId,
+                ShippingCompany = o.ShippingCompany,
+                PaymentMethod = o.PaymentMethod,
+                TotalAmount = o.TotalAmount,
+                OrderDate = o.OrderDate,
+                Status = o.Status,
+                Address = o.Address != null ? new AddressDto
+                {
+                    Id = o.Address.Id,
+                    AddressTitle = o.Address.AddressTitle,
+                    Street = o.Address.Street,
+                    City = o.Address.City,
+                    State = o.Address.State,
+                    PostalCode = o.Address.PostalCode,
+                    Country = o.Address.Country,
+                    ContactName = o.Address.ContactName,
+                    ContactSurname = o.Address.ContactSurname,
+                    ContactPhone = o.Address.ContactPhone
+                } : null,
+                OrderItems = o.OrderItems.Select(oi => new OrderItemDto
+                {
+                    Id = oi.Id,
+                    ProductId = oi.ProductId,
+                    Quantity = oi.Quantity,
+                    UnitPrice = oi.UnitPrice,
+                    ProductName = oi.Product != null ? oi.Product.Name : string.Empty,
+                    ProductImage = oi.Product != null ? oi.Product.ImageUrl : string.Empty
+                }).ToList()
+            }).ToList();
         }
 
+        // Yeni sipariş ekler
         public async Task AddAsync(Order order)
         {
-            await _repo.AddAsync(order);
-            await _repo.SaveAsync();
+            await _repo.AddAsync(order); // Siparişi ekle
+            await _repo.SaveAsync(); // Değişiklikleri kaydet
         }
 
+        // Sipariş DTO'su ile yeni sipariş oluşturur (transaction ile)
         public async Task<Order> CreateOrderAsync(OrderDto orderDto)
         {
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            using var transaction = await _context.Database.BeginTransactionAsync(); // Transaction başlat
             try
             {
                 // Sipariş oluştur
                 var order = new Order
                 {
-                    UserId = orderDto.UserId,
-                    AddressId = orderDto.AddressId,
-                    ShippingCompany = orderDto.ShippingCompany,
-                    PaymentMethod = orderDto.PaymentMethod,
-                    TotalAmount = orderDto.TotalAmount,
-                    OrderDate = DateTime.Now,
-                    Status = "Pending"
+                    UserId = orderDto.UserId, // Kullanıcı ID
+                    AddressId = orderDto.AddressId, // Adres ID
+                    ShippingCompany = orderDto.ShippingCompany, // Kargo firması
+                    PaymentMethod = orderDto.PaymentMethod, // Ödeme yöntemi
+                    TotalAmount = orderDto.TotalAmount, // Toplam tutar
+                    OrderDate = DateTime.Now, // Sipariş tarihi
+                    Status = "Pending" // Sipariş durumu
                 };
 
-                await _context.Orders.AddAsync(order);
-                await _context.SaveChangesAsync();
+                await _context.Orders.AddAsync(order); // Siparişi ekle
+                await _context.SaveChangesAsync(); // Kaydet
 
                 // Sipariş kalemlerini oluştur
                 foreach (var item in orderDto.OrderItems)
                 {
                     var orderItem = new OrderItem
                     {
-                        OrderId = order.Id,
-                        ProductId = item.ProductId,
-                        Quantity = item.Quantity,
-                        UnitPrice = item.UnitPrice
+                        OrderId = order.Id, // Sipariş ID
+                        ProductId = item.ProductId, // Ürün ID
+                        Quantity = item.Quantity, // Adet
+                        UnitPrice = item.UnitPrice // Birim fiyat
                     };
-                    await _context.OrderItems.AddAsync(orderItem);
+                    await _context.OrderItems.AddAsync(orderItem); // Sipariş kalemini ekle
                 }
 
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
+                await _context.SaveChangesAsync(); // Kaydet
+                await transaction.CommitAsync(); // Transaction'ı tamamla
 
-                return order;
+                return order; // Oluşturulan siparişi döndür
             }
             catch
             {
-                await transaction.RollbackAsync();
-                throw;
+                await transaction.RollbackAsync(); // Hata olursa geri al
+                throw; // Hata fırlat
             }
         }
 
+        // Var olan siparişi günceller
         public async Task UpdateAsync(Order order)
         {
-            _repo.Update(order);
-            await _repo.SaveAsync();
+            _repo.Update(order); // Siparişi güncelle
+            await _repo.SaveAsync(); // Değişiklikleri kaydet
         }
 
-        public async Task DeleteAsync(int id)
+        // Sipariş durumunu günceller (asenkron)
+        public async Task UpdateOrderStatusAsync(int orderId, string status)
         {
-            var order = await _repo.GetByIdAsync(id);
+            var order = await _repo.GetByIdAsync(orderId);
             if (order != null)
             {
-                _repo.Delete(order);
+                order.Status = status;
+                _repo.Update(order);
                 await _repo.SaveAsync();
             }
         }
 
-        public async Task UpdateStatusAsync(int orderId, string status)
+        // Id'ye göre siparişi siler (varsa)
+        public async Task DeleteAsync(int id)
         {
-            var order = await _repo.GetByIdAsync(orderId);
-            if (order == null) throw new Exception("Order not found");
-            order.Status = status;
-            _repo.Update(order);
-            await _repo.SaveAsync();
+            var order = await _repo.GetByIdAsync(id); // Siparişi getir
+            if (order != null)
+            {
+                _repo.Delete(order); // Siparişi sil
+                await _repo.SaveAsync(); // Değişiklikleri kaydet
+            }
         }
 
-        public async Task UpdateOrderStatusAsync(int orderId, string status)
+        // Kullanıcıya ait siparişleri getirir (asenkron)
+        public async Task<List<OrderDto>> GetByUserIdAsync(int userId)
         {
-            var order = await _repo.GetByIdAsync(orderId);
-            if (order == null) throw new Exception("Order not found");
-            order.Status = status;
-            _repo.Update(order);
-            await _repo.SaveAsync();
-        }
-
-        public async Task ApproveOrderAsync(int orderId)
-        {
-            var order = await _repo.GetByIdAsync(orderId);
-            if (order == null) throw new Exception("Order not found");
-            order.Status = "Approved";
-            _repo.Update(order);
-            await _repo.SaveAsync();
-        }
-
-        public async Task RejectOrderAsync(int orderId)
-        {
-            var order = await _repo.GetByIdAsync(orderId);
-            if (order == null) throw new Exception("Order not found");
-            order.Status = "Rejected";
-            _repo.Update(order);
-            await _repo.SaveAsync();
-        }
-
-        public async Task<object> GetEarningsReportAsync(string period)
-        {
-            var orders = await _repo.GetAllAsync();
-            DateTime start = DateTime.Now;
-            if (period == "weekly") start = DateTime.Now.AddDays(-7);
-            else if (period == "monthly") start = DateTime.Now.AddMonths(-1);
-            else if (period == "yearly") start = DateTime.Now.AddYears(-1);
-            var filtered = orders.Where(o => o.OrderDate >= start && o.Status == "Approved");
-            var total = filtered.Sum(o => o.TotalAmount);
-            return new { period, total };
-        }
-
-        public async Task<List<Order>> GetByUserIdAsync(int userId)
-        {
-            return (await _repo.GetAllAsync()).Where(o => o.UserId == userId).ToList();
+            return await GetOrdersByUserIdAsync(userId);
         }
     }
 }
