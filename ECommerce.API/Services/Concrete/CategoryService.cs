@@ -3,6 +3,8 @@ using ECommerce.API.Entities.Concrete; // Kategori varlık sınıfı
 using ECommerce.API.Repository.Abstract; // Kategori repository arayüzü
 using ECommerce.API.Services.Abstract; // Kategori servis arayüzü
 using ECommerce.API.DTO; // DTO sınıfları
+using ECommerce.API.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace ECommerce.API.Services.Concrete
 {
@@ -11,11 +13,13 @@ namespace ECommerce.API.Services.Concrete
     {
         // Kategori repository'si (veri erişim katmanı)
         private readonly ICategoryRepository _repo;
+        private readonly MyDbContext _context;
 
         // CategoryService constructor: Repository bağımlılığını enjekte eder
-        public CategoryService(ICategoryRepository repo)
+        public CategoryService(ICategoryRepository repo, MyDbContext context)
         {
             _repo = repo; // Repository'yi ata
+            _context = context;
         }
 
         // Tüm kategorileri DTO olarak getirir
@@ -59,11 +63,15 @@ namespace ECommerce.API.Services.Concrete
         // Id'ye göre kategoriyi siler (varsa)
         public async Task DeleteAsync(int id)
         {
-            var category = await _repo.GetByIdAsync(id); // Kategoriyi getir
+            // O kategoriye ait ürün var mı kontrol et
+            var hasProduct = await _context.Products.AnyAsync(p => p.CategoryId == id && p.IsActive);
+            if (hasProduct)
+                throw new Exception("Bu kategoriye ait ürünler olduğu için silinemez.");
+            var category = await _repo.GetByIdAsync(id);
             if (category != null)
             {
-                _repo.Delete(category); // Kategoriyi sil
-                await _repo.SaveAsync(); // Değişiklikleri kaydet
+                _repo.Delete(category);
+                await _repo.SaveAsync();
             }
         }
 
@@ -95,6 +103,10 @@ namespace ECommerce.API.Services.Concrete
         // DTO ile kategoriyi siler (varsa)
         public async Task DeleteCategoryAsync(int id)
         {
+            // O kategoriye ait aktif ürün var mı kontrol et
+            var hasProduct = await _context.Products.AnyAsync(p => p.CategoryId == id && p.IsActive);
+            if (hasProduct)
+                throw new Exception("Bu kategoriye ait ürünler olduğu için silinemez.");
             var category = await _repo.GetByIdAsync(id); // Kategoriyi getir
             if (category != null)
             {

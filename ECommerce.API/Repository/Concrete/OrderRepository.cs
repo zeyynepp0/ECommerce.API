@@ -35,7 +35,7 @@ namespace ECommerce.API.Repository.Concrete
         // Siparişin durumunu günceller
         // orderId: Güncellenecek siparişin kimliği
         // status: Yeni durum bilgisi
-        public async Task UpdateOrderStatusAsync(int orderId, string status)
+        public async Task UpdateOrderStatusAsync(int orderId, OrderStatus status)
         {
             // İlgili sipariş bulunur
             var order = await _context.Orders.FindAsync(orderId);
@@ -47,6 +47,18 @@ namespace ECommerce.API.Repository.Concrete
             _context.Orders.Update(order);
             // Değişiklikler veritabanına kaydedilir
             await _context.SaveChangesAsync();
+        }
+
+        public async Task<Order> GetByIdAsync(int id)
+        {
+            return await _context.Orders
+                .Include(o => o.OrderItems)
+                    .ThenInclude(oi => oi.Product)
+                        .ThenInclude(p => p.Category)
+                .Include(o => o.Address)
+                .Include(o => o.User)
+                .Include(o => o.ShippingCompany)
+                .FirstOrDefaultAsync(o => o.Id == id);
         }
     }
 }

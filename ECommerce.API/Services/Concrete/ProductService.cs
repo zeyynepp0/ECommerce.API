@@ -3,6 +3,8 @@ using ECommerce.API.Entities.Concrete; // Ürün varlık sınıfı
 using ECommerce.API.Repository.Abstract; // Ürün repository arayüzü
 using ECommerce.API.Services.Abstract; // Ürün servis arayüzü
 using ECommerce.API.DTO; // DTO sınıfları
+using ECommerce.API.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace ECommerce.API.Services.Concrete
 {
@@ -11,11 +13,13 @@ namespace ECommerce.API.Services.Concrete
     {
         // Ürün repository'si (veri erişim katmanı)
         private readonly IProductRepository _repo;
+        private readonly MyDbContext _context;
 
         // ProductService constructor: Repository bağımlılığını enjekte eder
-        public ProductService(IProductRepository repo)
+        public ProductService(IProductRepository repo, MyDbContext context)
         {
             _repo = repo; // Repository'yi ata
+            _context = context;
         }
 
         // Tüm ürünleri getirir (ProductDto ile)
@@ -38,7 +42,7 @@ namespace ECommerce.API.Services.Concrete
                     Name = product.Name,
                     Description = product.Description,
                     Price = product.Price,
-                    Stock = product.Stock,
+                    Stock = product.StockQuantity,
                     CategoryId = product.CategoryId,
                     ImageUrl = product.ImageUrl,
                     Rating = rating,
@@ -67,7 +71,7 @@ namespace ECommerce.API.Services.Concrete
                 Name = product.Name,
                 Description = product.Description,
                 Price = product.Price,
-                Stock = product.Stock,
+                Stock = product.StockQuantity,
                 CategoryId = product.CategoryId,
                 ImageUrl = product.ImageUrl,
                 Rating = rating,
@@ -110,7 +114,7 @@ namespace ECommerce.API.Services.Concrete
         // Kategoriye göre ve bir ürünü hariç tutarak ürünleri getirir
         public async Task<List<Product>> GetByCategoryIdAsync(int categoryId, int excludeProductId)
         {
-            return await _repo.GetByCategoryIdAsync(categoryId, excludeProductId); // Kategoriye göre ürünleri getir
+            return await _repo.GetByCategoryIdAsync(categoryId, excludeProductId).ContinueWith(t => t.Result.Where(p => p.IsActive).ToList());
         }
 
         // ProductDto ile yeni ürün ekler. Aynı isimde ürün varsa hata fırlatır
@@ -125,7 +129,7 @@ namespace ECommerce.API.Services.Concrete
                 Name = dto.Name, // Ürün adı
                 Description = dto.Description, // Ürün açıklaması
                 Price = dto.Price, // Ürün fiyatı
-                Stock = dto.Stock, // Ürün stok miktarı
+                StockQuantity = dto.Stock, // Ürün stok miktarı
                 CategoryId = dto.CategoryId, // Kategori ID
                 ImageUrl = dto.ImageUrl // Ürün görseli
             };
@@ -142,7 +146,7 @@ namespace ECommerce.API.Services.Concrete
             product.Name = dto.Name; // Adı güncelle
             product.Description = dto.Description; // Açıklamayı güncelle
             product.Price = dto.Price; // Fiyatı güncelle
-            product.Stock = dto.Stock; // Stok miktarını güncelle
+            product.StockQuantity = dto.Stock; // Stok miktarını güncelle
             product.CategoryId = dto.CategoryId; // Kategori ID'yi güncelle
             product.ImageUrl = dto.ImageUrl; // Görseli güncelle
 
@@ -156,7 +160,17 @@ namespace ECommerce.API.Services.Concrete
             var product = await _repo.GetByIdAsync(id); // Ürünü getir
             if (product != null)
             {
-                _repo.Delete(product); // Ürünü sil
+                // Siparişi olan ürün fiziksel olarak silinemez, isActive=false yapılır
+                var hasOrder = await _context.OrderItems.AnyAsync(oi => oi.ProductId == id);
+                if (hasOrder)
+                {
+                    product.IsActive = false;
+                    _repo.Update(product);
+                }
+                else
+                {
+                    _repo.Delete(product); // Ürünü sil
+                }
                 await _repo.SaveAsync(); // Değişiklikleri kaydet
             }
         }

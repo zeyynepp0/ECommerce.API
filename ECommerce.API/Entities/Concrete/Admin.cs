@@ -1,6 +1,7 @@
 ﻿
 
 using ECommerce.API.Entities.Abstract;
+using System.ComponentModel.DataAnnotations;
 
 namespace ECommerce.API.Entities.Concrete
 {
@@ -12,7 +13,18 @@ namespace ECommerce.API.Entities.Concrete
         
         /// Yöneticinin benzersiz kimliği.
        
-        public int AdminId { get; set; }
+        [Key]
+        public int Id { get; set; }
+
+        
+        /// Yöneticinin e-posta adresi.
+       
+        public string Email { get; set; } = string.Empty;
+
+        
+        /// Yöneticinin şifre hash değeri.
+       
+        public string PasswordHash { get; set; } = string.Empty;
 
         
         /// Yöneticinin bağlı olduğu kullanıcı kimliği (FK).

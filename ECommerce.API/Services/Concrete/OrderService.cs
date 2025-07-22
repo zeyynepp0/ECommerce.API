@@ -15,19 +15,69 @@ namespace ECommerce.API.Services.Concrete
         private readonly IOrderRepository _repo;
         // Veritabanı context'i (transaction işlemleri için)
         private readonly MyDbContext _context;
+        private readonly IShippingCompanyRepository _shippingRepo;
+        private readonly INotificationService _notificationService;
 
         // OrderService constructor: Repository ve context bağımlılıklarını enjekte eder
-        public OrderService(IOrderRepository repo, MyDbContext context)
+        public OrderService(IOrderRepository repo, MyDbContext context, IShippingCompanyRepository shippingRepo, INotificationService notificationService)
         {
             _repo = repo; // Repository'yi ata
             _context = context; // Context'i ata
+            _shippingRepo = shippingRepo;
+            _notificationService = notificationService;
         }
 
         // Tüm siparişleri getirir
         public async Task<List<Order>> GetAllAsync() => await _repo.GetAllAsync(); // Repository'den tüm siparişleri getir
 
         // Id'ye göre siparişi getirir
-        public async Task<Order> GetByIdAsync(int id) => await _repo.GetByIdAsync(id); // Repository'den siparişi getir
+        public async Task<OrderDto> GetByIdAsync(int id)
+        {
+            var o = await _repo.GetByIdAsync(id);
+            if (o == null) return null;
+            return new OrderDto
+            {
+                Id = o.Id,
+                UserId = o.UserId,
+                UserEmail = o.User?.Email ?? string.Empty,
+                CreatedAt = o.CreatedAt,
+                OrderDate = o.OrderDate,
+                Status = o.Status,
+                TotalAmount = o.TotalAmount,
+                ShippingCost = o.ShippingCost,
+                PaymentMethod = o.PaymentMethod,
+                DeliveryPersonName = o.DeliveryPersonName,
+                DeliveryPersonPhone = o.DeliveryPersonPhone,
+                ShippingCompanyId = o.ShippingCompanyId,
+                ShippingCompanyName = o.ShippingCompany?.Name ?? string.Empty,
+                AdminStatus = o.AdminStatus,
+                AddressId = o.AddressId,
+                Address = o.Address != null ? new AddressDto
+                {
+                    Id = o.Address.Id,
+                    AddressTitle = o.Address.AddressTitle,
+                    Street = o.Address.Street,
+                    City = o.Address.City,
+                    State = o.Address.State,
+                    PostalCode = o.Address.PostalCode,
+                    Country = o.Address.Country,
+                    ContactName = o.Address.ContactName,
+                    ContactSurname = o.Address.ContactSurname,
+                    ContactPhone = o.Address.ContactPhone
+                } : null,
+                OrderItems = o.OrderItems.Select(oi => new OrderItemDto
+                {
+                    Id = oi.Id,
+                    ProductId = oi.ProductId,
+                    Quantity = oi.Quantity,
+                    UnitPrice = oi.UnitPrice,
+                    ProductName = oi.Product != null ? oi.Product.Name : string.Empty,
+                    ProductImage = oi.Product != null ? oi.Product.ImageUrl : string.Empty,
+                    ProductDescription = oi.Product?.Description ?? string.Empty,
+                    ProductCategory = oi.Product?.Category?.Name ?? string.Empty
+                }).ToList()
+            };
+        }
 
         // Belirli bir kullanıcıya ait siparişleri, detaylarıyla birlikte getirir
         public async Task<List<OrderDto>> GetOrdersByUserIdAsync(int userId)
@@ -36,6 +86,7 @@ namespace ECommerce.API.Services.Concrete
                 .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Product)
                 .Include(o => o.Address)
+                .Include(o => o.ShippingCompany)
                 .Where(o => o.UserId == userId)
                 .OrderByDescending(o => o.OrderDate)
                 .ToListAsync();
@@ -45,12 +96,19 @@ namespace ECommerce.API.Services.Concrete
             {
                 Id = o.Id,
                 UserId = o.UserId,
-                AddressId = o.AddressId,
-                ShippingCompany = o.ShippingCompany,
-                PaymentMethod = o.PaymentMethod,
-                TotalAmount = o.TotalAmount,
+                UserEmail = o.User?.Email ?? string.Empty,
+                CreatedAt = o.CreatedAt,
                 OrderDate = o.OrderDate,
                 Status = o.Status,
+                TotalAmount = o.TotalAmount,
+                ShippingCost = o.ShippingCost,
+                PaymentMethod = o.PaymentMethod,
+                DeliveryPersonName = o.DeliveryPersonName,
+                DeliveryPersonPhone = o.DeliveryPersonPhone,
+                ShippingCompanyId = o.ShippingCompanyId,
+                ShippingCompanyName = o.ShippingCompany?.Name ?? string.Empty,
+                AdminStatus = o.AdminStatus,
+                AddressId = o.AddressId,
                 Address = o.Address != null ? new AddressDto
                 {
                     Id = o.Address.Id,
@@ -89,36 +147,66 @@ namespace ECommerce.API.Services.Concrete
             using var transaction = await _context.Database.BeginTransactionAsync(); // Transaction başlat
             try
             {
+                // Kargo firması ve fiyatı alınır
+                var shippingCompany = await _shippingRepo.GetByIdAsync(orderDto.ShippingCompanyId ?? 0);
+                if (orderDto.ShippingCompanyId == null || shippingCompany == null || !shippingCompany.IsActive)
+                    throw new Exception("Seçilen kargo firması bulunamadı veya aktif değil.");
+
+                // Sipariş kalemlerinin toplamı hesaplanır
+                decimal itemsTotal = orderDto.OrderItems.Sum(i => i.UnitPrice * i.Quantity);
+                decimal shippingCost = itemsTotal > shippingCompany.FreeShippingLimit ? 0 : shippingCompany.Price;
+                decimal totalAmount = itemsTotal + shippingCost;
+
                 // Sipariş oluştur
                 var order = new Order
                 {
                     UserId = orderDto.UserId, // Kullanıcı ID
                     AddressId = orderDto.AddressId, // Adres ID
-                    ShippingCompany = orderDto.ShippingCompany, // Kargo firması
+                    ShippingCompanyId = orderDto.ShippingCompanyId, // Kargo firması ID
+                    ShippingCost = shippingCost, // Kargo ücreti
                     PaymentMethod = orderDto.PaymentMethod, // Ödeme yöntemi
-                    TotalAmount = orderDto.TotalAmount, // Toplam tutar
+                    TotalAmount = totalAmount, // Toplam tutar
                     OrderDate = DateTime.Now, // Sipariş tarihi
-                    Status = "Pending" // Sipariş durumu
+                    Status = OrderStatus.Pending, // Sipariş durumu
+                    DeliveryPersonName = orderDto.DeliveryPersonName, // Teslimat kişisi
+                    DeliveryPersonPhone = orderDto.DeliveryPersonPhone // Teslimat kişisi telefonu
                 };
 
                 await _context.Orders.AddAsync(order); // Siparişi ekle
                 await _context.SaveChangesAsync(); // Kaydet
 
-                // Sipariş kalemlerini oluştur
+                // Sipariş kalemlerini oluştur ve stok düş
                 foreach (var item in orderDto.OrderItems)
                 {
+                    var product = await _context.Products.FindAsync(item.ProductId);
+                    if (product == null)
+                        throw new Exception($"Ürün bulunamadı: {item.ProductId}");
+                    if (product.StockQuantity < item.Quantity)
+                        throw new Exception($"{product.Name} ürünü için yeterli stok yok.");
+                    product.StockQuantity -= item.Quantity;
+                    _context.Products.Update(product);
+
                     var orderItem = new OrderItem
                     {
-                        OrderId = order.Id, // Sipariş ID
-                        ProductId = item.ProductId, // Ürün ID
-                        Quantity = item.Quantity, // Adet
-                        UnitPrice = item.UnitPrice // Birim fiyat
+                        OrderId = order.Id,
+                        ProductId = item.ProductId,
+                        Quantity = item.Quantity,
+                        UnitPrice = item.UnitPrice
                     };
-                    await _context.OrderItems.AddAsync(orderItem); // Sipariş kalemini ekle
+                    await _context.OrderItems.AddAsync(orderItem);
                 }
 
                 await _context.SaveChangesAsync(); // Kaydet
                 await transaction.CommitAsync(); // Transaction'ı tamamla
+
+                // Sipariş oluşturulunca kullanıcıya bildirim gönder
+                await _notificationService.AddAsync(new DTO.NotificationDto
+                {
+                    UserId = order.UserId,
+                    Message = $"Siparişiniz alındı, onay bekliyor. Sipariş No: #{order.Id}",
+                    IsRead = false,
+                    CreatedAt = DateTime.UtcNow
+                });
 
                 return order; // Oluşturulan siparişi döndür
             }
@@ -137,7 +225,7 @@ namespace ECommerce.API.Services.Concrete
         }
 
         // Sipariş durumunu günceller (asenkron)
-        public async Task UpdateOrderStatusAsync(int orderId, string status)
+        public async Task UpdateOrderStatusAsync(int orderId, OrderStatus status)
         {
             var order = await _repo.GetByIdAsync(orderId);
             if (order != null)
@@ -145,6 +233,25 @@ namespace ECommerce.API.Services.Concrete
                 order.Status = status;
                 _repo.Update(order);
                 await _repo.SaveAsync();
+                // Bildirim gönder
+                string message = status switch
+                {
+                    OrderStatus.Approved => $"Siparişiniz satıcı tarafından onaylandı. Sipariş No: #{order.Id}",
+                    OrderStatus.Preparing => $"Siparişiniz hazırlanıyor. Sipariş No: #{order.Id}",
+                    OrderStatus.Shipped => $"Siparişiniz kargoya verildi. Sipariş No: #{order.Id}",
+                    OrderStatus.Delivered => $"Siparişiniz teslim edildi. Sipariş No: #{order.Id}",
+                    OrderStatus.Cancelled => $"Siparişiniz iptal edildi. Sipariş No: #{order.Id}",
+                    OrderStatus.Returned => $"İade talebiniz alındı. Sipariş No: #{order.Id}",
+                    OrderStatus.Refunded => $"İade işleminiz tamamlandı. Sipariş No: #{order.Id}",
+                    _ => $"Siparişinizin durumu güncellendi: {status}. Sipariş No: #{order.Id}"
+                };
+                await _notificationService.AddAsync(new DTO.NotificationDto
+                {
+                    UserId = order.UserId,
+                    Message = message,
+                    IsRead = false,
+                    CreatedAt = DateTime.UtcNow
+                });
             }
         }
 

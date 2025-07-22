@@ -5,8 +5,8 @@ namespace ECommerce.API.DTO
     public class UpdateAdminDto
     {
         public int Id { get; set; } // Admin ID'si
-        public string Name { get; set; } // Admin adı
-        public string Email { get; set; } // Admin e-posta adresi
-        public string Password { get; set; } // Admin şifresi
+        public string Name { get; set; } = string.Empty; // Admin adı
+        public string Email { get; set; } = string.Empty; // Admin e-posta adresi
+        public string Password { get; set; } = string.Empty; // Admin şifresi
     }
 } 

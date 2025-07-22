@@ -19,7 +19,7 @@ namespace ECommerce.API.Repository.Concrete
 
         public async Task<int> CountAsync()
         {
-            return await _context.Categories.CountAsync();
+            return await Context.Categories.CountAsync();
         }
     }
 }

@@ -13,20 +13,16 @@ namespace ECommerce.API.Repository.Concrete
     // Sepet ürünlerine özel veri erişim işlemlerini gerçekleştiren repository sınıfı
     public class CartItemRepository : Repository<CartItem>, ICartItemRepository
     {
-        // Veritabanı context'i
-        private readonly MyDbContext _context;
-
         // CartItemRepository constructor
         // <param name="context">Veritabanı context'i</param>
         public CartItemRepository(MyDbContext context) : base(context)
         {
-            _context = context;
         }
 
         // Tüm sepet ürünlerini kullanıcı ve ürün bilgileriyle birlikte getirir
         public async Task<List<CartItem>> GetAllWithIncludesAsync()
         {
-            return await _context.CartItems
+            return await Context.CartItems
                 .Include(ci => ci.Product)
                 .Include(ci => ci.User)
                 .ToListAsync();
@@ -35,7 +31,7 @@ namespace ECommerce.API.Repository.Concrete
         // Id'ye göre sepet ürününü kullanıcı ve ürün bilgileriyle birlikte getirir
         public async Task<CartItem> GetByIdWithIncludesAsync(int id)
         {
-            return await _context.CartItems
+            return await Context.CartItems
                 .Include(ci => ci.Product)
                 .Include(ci => ci.User)
                 .FirstOrDefaultAsync(ci => ci.Id == id);
@@ -44,14 +40,14 @@ namespace ECommerce.API.Repository.Concrete
         // Belirli bir kullanıcı ve ürün için sepet kaydını getirir
         public async Task<CartItem> GetCartItemByUserAndProductAsync(int userId, int productId)
         {
-            return await _context.CartItems
+            return await Context.CartItems
                 .FirstOrDefaultAsync(ci => ci.UserId == userId && ci.ProductId == productId);
         }
 
         // Belirli bir kullanıcıya ait tüm sepet ürünlerini getirir
         public async Task<List<CartItem>> GetCartItemsByUserIdAsync(int userId)
         {
-            return await _context.CartItems
+            return await Context.CartItems
                 .Where(ci => ci.UserId == userId)
                 .Include(ci => ci.Product)
                 .ToListAsync();
@@ -60,29 +56,29 @@ namespace ECommerce.API.Repository.Concrete
         // Belirli bir kullanıcının sepetini asenkron olarak temizler
         public async Task ClearUserCartAsync(int userId)
         {
-            var items = await _context.CartItems.Where(ci => ci.UserId == userId).ToListAsync();
+            var items = await Context.CartItems.Where(ci => ci.UserId == userId).ToListAsync();
             if (items.Any())
             {
-                _context.CartItems.RemoveRange(items);
-                await _context.SaveChangesAsync();
+                Context.CartItems.RemoveRange(items);
+                await Context.SaveChangesAsync();
             }
         }
 
         // Birden fazla sepet ürününü topluca siler
         public async Task DeleteRangeAsync(List<CartItem> items)
         {
-            _context.CartItems.RemoveRange(items);
-            await _context.SaveChangesAsync();
+            Context.CartItems.RemoveRange(items);
+            await Context.SaveChangesAsync();
         }
 
         // Yapılan değişiklikleri veritabanına kaydeder (asenkron)
         public async Task SaveChangesAsync()
         {
-            await _context.SaveChangesAsync();
+            await Context.SaveChangesAsync();
         }
 
         // DbSet'e erişmek için kullanılabilir
-        public DbSet<CartItem> CartItems => _context.CartItems;
+        public DbSet<CartItem> CartItems => Context.CartItems;
     }
 }
 

@@ -21,6 +21,8 @@ namespace ECommerce.API.Data
         public DbSet<Review> Reviews { get; set; }
         public DbSet<Admin> Admins { get; set; }
         public DbSet<Favorite> Favorites { get; set; }
+        public DbSet<ShippingCompany> ShippingCompanies { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -34,6 +36,12 @@ namespace ECommerce.API.Data
                 .WithMany()
                 .HasForeignKey(o => o.AddressId)
                 .OnDelete(DeleteBehavior.Restrict); // Cascade çakışmasını önle
+
+            modelBuilder.Entity<Order>()
+                .HasOne(o => o.ShippingCompany)
+                .WithMany()
+                .HasForeignKey(o => o.ShippingCompanyId)
+                .OnDelete(DeleteBehavior.Restrict); // Kargo firması silinirse siparişler silinmesin
         }
 
         

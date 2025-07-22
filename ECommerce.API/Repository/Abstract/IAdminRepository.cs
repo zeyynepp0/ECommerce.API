@@ -2,8 +2,6 @@
 using ECommerce.API.Entities.Concrete;
 // ECommerce.API.Data namespace'inden gerekli sınıfları içeri aktarır
 using ECommerce.API.Data;
-// ECommerce.API.Entities.Concrete namespace'inden tekrar Admin sınıfını içeri aktarır (gereksiz tekrar olabilir)
-using ECommerce.API.Entities.Concrete;
 // Repository arayüzlerini içeren namespace'i içeri aktarır
 using ECommerce.API.Repository.Abstract;
 

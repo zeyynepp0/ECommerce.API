@@ -10,20 +10,16 @@ namespace ECommerce.API.Repository.Concrete
     // Adminlere özel veri erişim işlemlerini gerçekleştiren repository sınıfı
     public class AdminRepository : Repository<Admin>, IAdminRepository
     {
-        // Veritabanı context'i
-        private readonly MyDbContext _context;
-
         // AdminRepository constructor
         // <param name="context">Veritabanı context'i</param>
         public AdminRepository(MyDbContext context) : base(context)
         {
-            _context = context;
         }
 
         // E-posta ve şifreye göre admin bilgisini getirir
         public async Task<Admin> GetByEmailAndPasswordAsync(string email, string password)
         {
-            return await _context.Admins
+            return await Context.Admins
                 .Include(a => a.User)
                 .FirstOrDefaultAsync(a => a.User.Email == email && a.User.PasswordHash == password);
         }
@@ -31,8 +27,8 @@ namespace ECommerce.API.Repository.Concrete
         // Admin bilgisini günceller
         public async Task<bool> UpdateAsync(Admin admin)
         {
-            _context.Admins.Update(admin);
-            return await _context.SaveChangesAsync() > 0;
+            Context.Admins.Update(admin);
+            return await Context.SaveChangesAsync() > 0;
         }
     }
 }

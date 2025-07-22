@@ -5,8 +5,8 @@ namespace ECommerce.API.DTO
     public class UpdateReviewDto
     {
         public int Id { get; set; } // Yorumun ID'si
-        public string Content { get; set; } // Yorum içeriği
+        public string Content { get; set; } = string.Empty; // Yorum içeriği
         public int Rating { get; set; } // Yorum puanı
-        public string LastModifiedBy { get; set; } // Güncelleyen kişi (admin/user)
+        public string LastModifiedBy { get; set; } = string.Empty; // Güncelleyen kişi (admin/user)
     }
 } 

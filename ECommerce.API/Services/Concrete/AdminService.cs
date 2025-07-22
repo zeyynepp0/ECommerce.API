@@ -3,34 +3,24 @@ using ECommerce.API.Entities.Concrete; // Admin, kullanıcı, sipariş gibi varl
 using ECommerce.API.Repository.Abstract; // Repository arayüzleri
 using ECommerce.API.Services.Abstract; // Admin servis arayüzü
 using ECommerce.API.DTO; // DTO sınıfları
+using ECommerce.API.Data;
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ECommerce.API.Services.Concrete
 {
     // Admin işlemleriyle ilgili iş mantığını yöneten servis sınıfı
     public class AdminService : IAdminService
     {
-        private readonly IOrderRepository _orderRepository; // Sipariş repository'si
-        private readonly IUserRepository _userRepository; // Kullanıcı repository'si
-        private readonly IReviewRepository _reviewRepository; // Yorum repository'si
-        private readonly IProductRepository _productRepository; // Ürün repository'si
-        private readonly IAdminRepository _adminRepository; // Admin repository'si
-        private readonly ICategoryRepository _categoryRepository; // Kategori repository'si
+        private readonly MyDbContext _context;
 
         // AdminService constructor: Repository bağımlılıklarını enjekte eder
-        public AdminService(
-            IOrderRepository orderRepository,
-            IUserRepository userRepository,
-            IReviewRepository reviewRepository,
-            IProductRepository productRepository,
-            IAdminRepository adminRepository,
-            ICategoryRepository categoryRepository)
+        public AdminService(MyDbContext context)
         {
-            _orderRepository = orderRepository; // Sipariş repository'sini ata
-            _userRepository = userRepository; // Kullanıcı repository'sini ata
-            _reviewRepository = reviewRepository; // Yorum repository'sini ata
-            _productRepository = productRepository; // Ürün repository'sini ata
-            _adminRepository = adminRepository; // Admin repository'sini ata
-            _categoryRepository = categoryRepository; // Kategori repository'sini ata
+            _context = context;
         }
 
         // Admin paneli için özet dashboard verilerini döndürür
@@ -44,7 +34,7 @@ namespace ECommerce.API.Services.Concrete
                 var startOfYear = new DateTime(now.Year, 1, 1);
 
                 List<Order> totalOrders = null;
-                try { totalOrders = await _orderRepository.GetAllAsync(); Console.WriteLine($"Siparişler çekildi: {totalOrders?.Count}"); } catch (Exception ex) { Console.WriteLine($"Siparişler çekilemedi: {ex.Message}"); }
+                try { totalOrders = await _context.Orders.ToListAsync(); Console.WriteLine($"Siparişler çekildi: {totalOrders?.Count}"); } catch (Exception ex) { Console.WriteLine($"Siparişler çekilemedi: {ex.Message}"); }
                 IEnumerable<Order> monthlyOrders = null;
                 IEnumerable<Order> yearlyOrders = null;
                 decimal? dailyRevenue = null;
@@ -69,12 +59,12 @@ namespace ECommerce.API.Services.Concrete
                     try { totalRevenue = totalOrders.Sum(o => o.TotalAmount); Console.WriteLine($"Toplam gelir: {totalRevenue}"); } catch (Exception ex) { Console.WriteLine($"Toplam gelir hatası: {ex.Message}"); }
                     try { recentOrders = totalOrders.OrderByDescending(o => o.OrderDate).Take(5).Cast<object>().ToList(); Console.WriteLine($"Son siparişler: {recentOrders?.Count}"); } catch (Exception ex) { Console.WriteLine($"Son siparişler hatası: {ex.Message}"); }
                 }
-                try { totalUsers = await _userRepository.CountAsync(); Console.WriteLine($"Kullanıcılar: {totalUsers}"); } catch (Exception ex) { Console.WriteLine($"Kullanıcılar hatası: {ex.Message}"); }
-                try { monthlyNewUsers = await _userRepository.CountByDateRangeAsync(startOfMonth, now); Console.WriteLine($"Aylık yeni kullanıcılar: {monthlyNewUsers}"); } catch (Exception ex) { Console.WriteLine($"Aylık yeni kullanıcılar hatası: {ex.Message}"); }
-                try { totalProducts = await _productRepository.CountAsync(); Console.WriteLine($"Ürünler: {totalProducts}"); } catch (Exception ex) { Console.WriteLine($"Ürünler hatası: {ex.Message}"); }
-                try { totalCategories = await _categoryRepository.CountAsync(); Console.WriteLine($"Kategoriler: {totalCategories}"); } catch (Exception ex) { Console.WriteLine($"Kategoriler hatası: {ex.Message}"); }
-                try { totalReviews = (await _reviewRepository.GetAllAsync()).Count; Console.WriteLine($"Yorumlar: {totalReviews}"); } catch (Exception ex) { Console.WriteLine($"Yorumlar hatası: {ex.Message}"); }
-                try { lowStockProducts = await _productRepository.GetLowStockProductsAsync(10); Console.WriteLine($"Düşük stoklu ürünler: {lowStockProducts?.Count}"); } catch (Exception ex) { Console.WriteLine($"Düşük stoklu ürünler hatası: {ex.Message}"); }
+                try { totalUsers = await _context.Users.CountAsync(); Console.WriteLine($"Kullanıcılar: {totalUsers}"); } catch (Exception ex) { Console.WriteLine($"Kullanıcılar hatası: {ex.Message}"); }
+                try { monthlyNewUsers = await GetNewUsersCountAsync(30); Console.WriteLine($"Aylık yeni kullanıcılar: {monthlyNewUsers}"); } catch (Exception ex) { Console.WriteLine($"Aylık yeni kullanıcılar hatası: {ex.Message}"); }
+                try { totalProducts = await _context.Products.CountAsync(); Console.WriteLine($"Ürünler: {totalProducts}"); } catch (Exception ex) { Console.WriteLine($"Ürünler hatası: {ex.Message}"); }
+                try { totalCategories = await _context.Categories.CountAsync(); Console.WriteLine($"Kategoriler: {totalCategories}"); } catch (Exception ex) { Console.WriteLine($"Kategoriler hatası: {ex.Message}"); }
+                try { totalReviews = await _context.Reviews.CountAsync(); Console.WriteLine($"Yorumlar: {totalReviews}"); } catch (Exception ex) { Console.WriteLine($"Yorumlar hatası: {ex.Message}"); }
+                try { lowStockProducts = await GetLowStockProductsAsync(10); Console.WriteLine($"Düşük stoklu ürünler: {lowStockProducts?.Count}"); } catch (Exception ex) { Console.WriteLine($"Düşük stoklu ürünler hatası: {ex.Message}"); }
 
                 // --- Aylık gelir grafiği ---
                 var revenueGraph = new RevenueGraphDto
@@ -128,7 +118,7 @@ namespace ECommerce.API.Services.Concrete
         // Tüm kullanıcıları DTO olarak döndürür
         public async Task<List<UserDto>> GetAllUsersAsync()
         {
-            var users = await _userRepository.GetAllAsync(); // Tüm kullanıcıları getir
+            var users = await _context.Users.ToListAsync(); // Tüm kullanıcıları getir
             return users.Select(u => new UserDto
             {
                 Id = u.Id, // Kullanıcı ID
@@ -144,35 +134,85 @@ namespace ECommerce.API.Services.Concrete
             }).ToList();
         }
 
+        // Tüm siparişleri OrderDto olarak döndürür
+        public async Task<List<OrderDto>> GetAllOrdersAsync()
+        {
+            var orders = await _context.Orders
+                .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Product)
+                .Include(o => o.Address)
+                .Include(o => o.ShippingCompany)
+                .Include(o => o.User)
+                .ToListAsync();
+
+            return orders.Select(o => new OrderDto
+            {
+                Id = o.Id,
+                UserId = o.UserId,
+                UserEmail = o.User?.Email ?? string.Empty,
+                CreatedAt = o.CreatedAt,
+                OrderDate = o.OrderDate,
+                Status = o.Status,
+                TotalAmount = o.TotalAmount,
+                ShippingCost = o.ShippingCost,
+                PaymentMethod = o.PaymentMethod,
+                DeliveryPersonName = o.DeliveryPersonName,
+                DeliveryPersonPhone = o.DeliveryPersonPhone,
+                ShippingCompanyId = o.ShippingCompanyId,
+                ShippingCompanyName = o.ShippingCompany?.Name ?? string.Empty,
+                AdminStatus = o.AdminStatus,
+                AddressId = o.AddressId,
+                Address = o.Address != null ? new AddressDto
+                {
+                    Id = o.Address.Id,
+                    AddressTitle = o.Address.AddressTitle,
+                    Street = o.Address.Street,
+                    City = o.Address.City,
+                    State = o.Address.State,
+                    PostalCode = o.Address.PostalCode,
+                    Country = o.Address.Country,
+                    ContactName = o.Address.ContactName,
+                    ContactSurname = o.Address.ContactSurname,
+                    ContactPhone = o.Address.ContactPhone
+                } : null,
+                OrderItems = o.OrderItems.Select(oi => new OrderItemDto
+                {
+                    Id = oi.Id,
+                    ProductId = oi.ProductId,
+                    Quantity = oi.Quantity,
+                    UnitPrice = oi.UnitPrice,
+                    ProductName = oi.Product != null ? oi.Product.Name : string.Empty,
+                    ProductImage = oi.Product != null ? oi.Product.ImageUrl : string.Empty
+                }).ToList(),
+                UserRequest = o.UserRequest
+                // UserRequestText ataması kaldırıldı
+            }).ToList();
+        }
+
         // Admin girişini doğrular
         public async Task<Admin> AuthenticateAsync(string email, string password)
         {
-            return await _adminRepository.GetByEmailAndPasswordAsync(email, password); // E-posta ve şifre ile admin getir
+            return await _context.Admins.FirstOrDefaultAsync(a => a.Email == email && a.PasswordHash == password);
         }
 
         // Admin bilgilerini günceller
-        public async Task<bool> UpdateAdminAsync(UpdateAdminDto dto)
+        public async Task<bool> UpdateAdminAsync(int adminId, UpdateAdminDto dto)
         {
-            var admin = await _adminRepository.GetByIdAsync(dto.Id); // Admini getir
-            if (admin == null) return false; // Admin yoksa false
-            if (admin.User == null)
-            {
-                // User'ı yükle
-                admin.User = await _userRepository.GetByIdAsync(admin.UserId); // Kullanıcıyı getir
-                if (admin.User == null) return false; // Kullanıcı yoksa false
-            }
-            admin.User.FirstName = dto.Name; // Adı güncelle (Name yerine FirstName/LastName ayırmak istersen DTO'yu güncelle)
-            admin.User.Email = dto.Email; // E-posta güncelle
+            var admin = await _context.Admins.FindAsync(adminId);
+            if (admin == null) return false;
+            
+            admin.Email = dto.Email;
             if (!string.IsNullOrEmpty(dto.Password))
-                admin.User.PasswordHash = dto.Password; // Şifre güncelle
-            await _userRepository.SaveAsync(); // Değişiklikleri kaydet
-            return true; // Başarılı ise true
+                admin.PasswordHash = dto.Password;
+            
+            await _context.SaveChangesAsync();
+            return true;
         }
 
         // Belirli bir döneme göre gelir raporu döndürür
-        public async Task<RevenueReportDto> GetRevenueReportAsync(string period)
+        public async Task<List<RevenueReportDto>> GetRevenueReportAsync(string period)
         {
-            var orders = await _orderRepository.GetAllAsync();
+            var orders = await _context.Orders.ToListAsync();
             DateTime now = DateTime.Now;
             IEnumerable<Order> filteredOrders = orders;
 
@@ -192,29 +232,33 @@ namespace ECommerce.API.Services.Concrete
                     break;
             }
 
-            return new RevenueReportDto
+            return new List<RevenueReportDto>
             {
-                TotalRevenue = filteredOrders.Sum(o => o.TotalAmount),
-                OrderCount = filteredOrders.Count(),
-                StartDate = period == "day" ? now.Date : (period == "month" ? new DateTime(now.Year, now.Month, 1) : (period == "year" ? new DateTime(now.Year, 1, 1) : (DateTime?)null)),
-                EndDate = now
+                new RevenueReportDto
+                {
+                    TotalRevenue = filteredOrders.Sum(o => o.TotalAmount),
+                    OrderCount = filteredOrders.Count(),
+                    StartDate = period == "day" ? now.Date : (period == "month" ? new DateTime(now.Year, now.Month, 1) : (period == "year" ? new DateTime(now.Year, 1, 1) : (DateTime?)null)),
+                    EndDate = now
+                }
             };
         }
 
-        // Belirli bir ay ve yıl için yeni kullanıcı sayısını döndürür (henüz uygulanmadı)
-        public Task<int> GetNewUsersCountAsync(int month, int year)
+        // Belirli gün sayısı için yeni kullanıcı sayısını döndürür
+        public async Task<int> GetNewUsersCountAsync(int days)
         {
-            throw new NotImplementedException(); // Henüz uygulanmadı
+            var startDate = DateTime.Now.AddDays(-days);
+            return await _context.Users.CountAsync(u => u.CreatedAt >= startDate);
         }
 
-        // Kullanıcı aktivitelerini döndürür (henüz uygulanmadı)
-        public async Task<object> GetUserActivityAsync()
+        // Kullanıcı aktivitelerini döndürür
+        public async Task<List<UserActivityDto>> GetUserActivityAsync()
         {
-            var users = await _userRepository.GetAllAsync();
-            var orders = await _orderRepository.GetAllAsync();
-            var reviews = await _reviewRepository.GetAllAsync();
+            var users = await _context.Users.ToListAsync();
+            var orders = await _context.Orders.ToListAsync();
+            var reviews = await _context.Reviews.ToListAsync();
 
-            var activityList = users.Select(u => new DTO.UserActivityDto
+            var activityList = users.Select(u => new UserActivityDto
             {
                 UserId = u.Id,
                 FullName = u.FullName,
@@ -228,19 +272,17 @@ namespace ECommerce.API.Services.Concrete
             return activityList;
         }
 
-        // Tüm yorumları döndürür (artık uygulanıyor)
-        public async Task<List<object>> GetAllReviewsAsync()
+        // Tüm yorumları döndürür
+        public async Task<List<ReviewDto>> GetAllReviewsAsync()
         {
-            // User ve Product navigation property'lerini dahil ederek çek
-            var reviews = await _reviewRepository.GetAllAsync();
+            var reviews = await _context.Reviews.ToListAsync();
             var userIds = reviews.Select(r => r.UserId).Distinct().ToList();
             var productIds = reviews.Select(r => r.ProductId).Distinct().ToList();
 
-            // User ve Product'ları topluca çek
-            var users = await _userRepository.GetAllAsync();
-            var products = await _productRepository.GetAllAsync();
+            var users = await _context.Users.ToListAsync();
+            var products = await _context.Products.ToListAsync();
 
-            var reviewDtos = reviews.Select(r => new DTO.ReviewDto
+            var reviewDtos = reviews.Select(r => new ReviewDto
             {
                 Id = r.Id,
                 ProductId = r.ProductId,
@@ -250,26 +292,63 @@ namespace ECommerce.API.Services.Concrete
                 CreatedAt = r.CreatedAt,
                 ProductName = products.FirstOrDefault(p => p.Id == r.ProductId)?.Name ?? string.Empty,
                 UserFullName = users.FirstOrDefault(u => u.Id == r.UserId)?.FullName ?? string.Empty
-            }).ToList<object>();
+            }).ToList();
             return reviewDtos;
         }
 
-        // Yorumu günceller (henüz uygulanmadı)
-        public Task<bool> UpdateReviewAsync(int id, UpdateReviewDto dto)
+        // Yorumu günceller
+        public async Task<bool> UpdateReviewAsync(int reviewId, UpdateReviewDto reviewDto)
         {
-            throw new NotImplementedException(); // Henüz uygulanmadı
-        }
-
-        // Yorumu siler (henüz uygulanmadı)
-        public async Task<bool> DeleteReviewAsync(int id)
-        {
-            var review = await _reviewRepository.GetByIdAsync(id);
+            var review = await _context.Reviews.FindAsync(reviewId);
             if (review == null)
                 return false;
 
-            _reviewRepository.Delete(review);
-            await _reviewRepository.SaveAsync();
+            review.Comment = reviewDto.Content;
+            review.Rating = reviewDto.Rating;
+            review.UpdatedAt = DateTime.Now;
+
+            await _context.SaveChangesAsync();
             return true;
+        }
+
+        // Yorumu siler
+        public async Task<bool> DeleteReviewAsync(int reviewId)
+        {
+            var review = await _context.Reviews.FindAsync(reviewId);
+            if (review == null)
+                return false;
+
+            _context.Reviews.Remove(review);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        // Sipariş durumunu günceller
+        public async Task<bool> UpdateOrderStatusAsync(int orderId, OrderStatus status)
+        {
+            var order = await _context.Orders.FindAsync(orderId);
+            if (order == null) return false;
+            
+            order.Status = status;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task UpdateOrderAdminStatusAsync(int orderId, Entities.Concrete.AdminOrderStatus adminStatus)
+        {
+            var order = await _context.Orders.FindAsync(orderId);
+            if (order == null)
+                throw new Exception("Sipariş bulunamadı.");
+
+            order.AdminStatus = adminStatus;
+            _context.Orders.Update(order);
+            await _context.SaveChangesAsync();
+        }
+
+        // Düşük stoklu ürünleri getirir
+        private async Task<List<Product>> GetLowStockProductsAsync(int threshold)
+        {
+            return await _context.Products.Where(p => p.StockQuantity <= threshold).ToListAsync();
         }
     }
 }

@@ -59,8 +59,15 @@ namespace ECommerce.API.Controllers
         [Authorize(Roles = "Admin")] // Sadece Admin rolü erişebilir
         public async Task<IActionResult> DeleteCategory(int id)
         {
-            await _service.DeleteCategoryAsync(id); // Kategoriyi sil
-            return Ok("Kategori silindi."); // Başarı mesajı döndür
+            try
+            {
+                await _service.DeleteCategoryAsync(id); // Kategoriyi sil
+                return Ok("Kategori silindi."); // Başarı mesajı döndür
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message); // Hata mesajı döndür
+            }
         }
 
         // Kategori resmi yükleme endpointi

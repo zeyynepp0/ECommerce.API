@@ -22,6 +22,6 @@ namespace ECommerce.API.Repository.Abstract
         // Yapılan değişiklikleri veritabanına kaydeder (asenkron)
         Task SaveAsync();
         // Siparişin durumunu asenkron olarak günceller
-        Task UpdateOrderStatusAsync(int orderId, string status);
+        Task UpdateOrderStatusAsync(int orderId, OrderStatus status);
     }
 }

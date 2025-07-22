@@ -11,10 +11,13 @@ namespace ECommerce.API.Repository.Concrete
     public class Repository<T> : IRepository<T> where T : class
     {
         // Veritabanı context'i
-        protected readonly MyDbContext _context;
+        private readonly MyDbContext _context;
         
         // Entity'e karşılık gelen DbSet
         private readonly DbSet<T> _dbSet;
+
+        // Alt sınıfların kullanması için protected Context özelliği
+        protected MyDbContext Context => _context;
 
         // Repository sınıfı için constructor
         // <param name="context">Veritabanı context'i</param>

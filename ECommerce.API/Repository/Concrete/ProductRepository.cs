@@ -51,7 +51,7 @@ namespace ECommerce.API.Repository.Concrete
         // Stok adedi belirli bir eşikten az olan ürünleri getirir
         public async Task<List<Product>> GetLowStockProductsAsync(int threshold)
         {
-            return await _context.Products.Where(p => p.Stock < threshold).ToListAsync();
+            return await _context.Products.Where(p => p.StockQuantity < threshold).ToListAsync();
         }
 
         // Tüm ürünleri review'larıyla birlikte getirir

@@ -8,12 +8,12 @@ namespace ECommerce.API.Services.Abstract
     public interface IOrderService
     {
         Task<List<Order>> GetAllAsync(); // Tüm siparişleri asenkron olarak getirir
-        Task<Order> GetByIdAsync(int id); // Id'ye göre siparişi asenkron olarak getirir
+        Task<OrderDto> GetByIdAsync(int id); // Id'ye göre siparişi asenkron olarak getirir
         Task<List<OrderDto>> GetOrdersByUserIdAsync(int userId); // Kullanıcıya ait siparişleri getirir (asenkron)
         Task AddAsync(Order order); // Yeni sipariş ekler (asenkron)
         Task<List<OrderDto>> GetByUserIdAsync(int userId); // Kullanıcıya ait siparişleri getirir (asenkron)
         Task<Order> CreateOrderAsync(OrderDto orderDto); // Yeni sipariş oluşturur (asenkron)
-        Task UpdateOrderStatusAsync(int orderId, string status); // Sipariş durumunu günceller (asenkron)
+        Task UpdateOrderStatusAsync(int orderId, OrderStatus status); // Sipariş durumunu günceller (asenkron)
         Task UpdateAsync(Order order); // Siparişi günceller (asenkron)
         Task DeleteAsync(int id); // Siparişi siler (asenkron)
     }

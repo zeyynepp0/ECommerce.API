@@ -30,7 +30,11 @@ namespace ECommerce.API.Entities.Concrete
         
         /// Ürün stok adedi.
        
-        public int Stock { get; set; }
+        public int StockQuantity { get; set; }
+
+        
+        /// Ürün aktif mi?
+        public bool IsActive { get; set; } = true;
 
         
         /// Ürünün ait olduğu kategori kimliği (FK).

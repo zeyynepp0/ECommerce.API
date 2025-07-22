@@ -1,5 +1,8 @@
 // DTO (Data Transfer Object) sınıflarının bulunduğu namespace
 using System.ComponentModel.DataAnnotations;
+using System;
+using System.Collections.Generic;
+using ECommerce.API.Entities.Concrete;
 
 namespace ECommerce.API.DTO
 {
@@ -8,27 +11,27 @@ namespace ECommerce.API.DTO
     {
         public int Id { get; set; }
         public int UserId { get; set; }
-        public int AddressId { get; set; }
-        public string ShippingCompany { get; set; } = string.Empty;
-        public string PaymentMethod { get; set; } = string.Empty;
-        public decimal TotalAmount { get; set; }
+        public string? UserEmail { get; set; }
+        public DateTime CreatedAt { get; set; }
         public DateTime OrderDate { get; set; }
-        public string Status { get; set; } = string.Empty;
+        public OrderStatus Status { get; set; }
+        public decimal TotalAmount { get; set; }
+        public decimal ShippingCost { get; set; }
+        public PaymentMethodType PaymentMethod { get; set; }
+        public string DeliveryPersonName { get; set; }
+        public string DeliveryPersonPhone { get; set; }
+        public int? ShippingCompanyId { get; set; }
+        public string? ShippingCompanyName { get; set; }
+        public AdminOrderStatus AdminStatus { get; set; } = AdminOrderStatus.None;
+        public int AddressId { get; set; }
         public AddressDto Address { get; set; }
-        public List<OrderItemDto> OrderItems { get; set; } = new List<OrderItemDto>();
+        public List<OrderItemDto> OrderItems { get; set; }
+        public string StatusText => Status.ToDisplayString();
+        public UserOrderRequest UserRequest { get; set; } = UserOrderRequest.None;
+        public string UserRequestText => UserRequest == UserOrderRequest.Cancel ? "İptal Talebi" : UserRequest == UserOrderRequest.Return ? "İade Talebi" : "Yok";
     }
 
     // Sipariş kalemi verilerini taşımak için kullanılan DTO sınıfı
-    public class OrderItemDto
-    {
-        public int Id { get; set; }
-        public int ProductId { get; set; }
-        public int Quantity { get; set; }
-        public decimal UnitPrice { get; set; }
-        public string ProductName { get; set; } = string.Empty;
-        public string ProductImage { get; set; } = string.Empty;
-    }
-
     // Ödeme verilerini taşımak için kullanılan DTO sınıfı
     public class PaymentDto
     {

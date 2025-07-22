@@ -20,8 +20,13 @@ namespace ECommerce.API.Controllers
         [HttpGet] // Tüm siparişleri getirir
         public async Task<IActionResult> GetAll() => Ok(await _service.GetAllAsync()); // Tüm siparişleri getir ve döndür
 
-        [HttpGet("{id}")] // Id'ye göre siparişi getirir
-        public async Task<IActionResult> GetById(int id) => Ok(await _service.GetByIdAsync(id)); // İlgili siparişi getir
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(int id)
+        {
+            var dto = await _service.GetByIdAsync(id);
+            if (dto == null) return NotFound();
+            return Ok(dto);
+        }
 
         [HttpGet("user/{userId:int}")] // Kullanıcıya ait siparişleri getirir
         public async Task<IActionResult> GetByUserId(int userId)
@@ -55,14 +60,130 @@ namespace ECommerce.API.Controllers
                     return BadRequest(new { message = "Geçersiz kart bilgileri" }); // Hatalı kart bilgisi
                 }
 
+                // Siparişi bul
+                var dbContext = HttpContext.RequestServices.GetService(typeof(ECommerce.API.Data.MyDbContext)) as ECommerce.API.Data.MyDbContext;
+                var order = dbContext?.Orders.FirstOrDefault(o => o.Id == paymentDto.OrderId);
+                if (order == null)
+                {
+                    return BadRequest(new { message = "Sipariş bulunamadı." });
+                }
+
                 // Sipariş durumunu güncelle
-                await _service.UpdateOrderStatusAsync(paymentDto.OrderId, "Paid"); // Siparişi ödenmiş olarak işaretle
-                
+                await _service.UpdateOrderStatusAsync(paymentDto.OrderId, OrderStatus.Approved); // Siparişi onaylandı olarak işaretle
+
+                // Payment tablosuna kayıt ekle
+                var payment = new ECommerce.API.Entities.Concrete.Payment
+                {
+                    OrderId = paymentDto.OrderId,
+                    PaymentMethod = order.PaymentMethod.ToString(), // Enumdan stringe
+                    PaymentStatus = "Success",
+                    PaymentDate = DateTime.Now
+                };
+                // PaymentService'i resolve et
+                var paymentService = HttpContext.RequestServices.GetService(typeof(ECommerce.API.Services.Abstract.IPaymentService)) as ECommerce.API.Services.Abstract.IPaymentService;
+                if (paymentService != null)
+                {
+                    await paymentService.AddAsync(payment);
+                }
+
+                // Kullanıcıya bildirim gönder
+                var notificationService = HttpContext.RequestServices.GetService(typeof(ECommerce.API.Services.Abstract.INotificationService)) as ECommerce.API.Services.Abstract.INotificationService;
+                if (notificationService != null)
+                {
+                    await notificationService.AddAsync(new ECommerce.API.DTO.NotificationDto
+                    {
+                        UserId = order.UserId,
+                        Message = $"Siparişinizin ödemesi başarıyla alındı ve onaylandı. Siparişiniz hazırlanıyor.",
+                        IsRead = false,
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
+
                 return Ok(new { message = "Ödeme başarıyla alındı" }); // Başarı mesajı döndür
             }
             catch (Exception ex)
             {
                 return BadRequest(new { message = ex.Message }); // Hata mesajı döndür
+            }
+        }
+
+        /// <summary>
+        /// Kullanıcı siparişi iptal etmek ister.
+        /// </summary>
+        [HttpPost("{orderId}/cancel")] // api/order/{orderId}/cancel
+        public async Task<IActionResult> CancelOrder(int orderId)
+        {
+            try
+            {
+                // Sadece UserRequest alanını güncelle, status hemen değişmesin
+                var dbContext = HttpContext.RequestServices.GetService(typeof(ECommerce.API.Data.MyDbContext)) as ECommerce.API.Data.MyDbContext;
+                var order = dbContext?.Orders.FirstOrDefault(o => o.Id == orderId);
+                if (order == null)
+                    return BadRequest(new { message = "Sipariş bulunamadı." });
+                order.UserRequest = ECommerce.API.Entities.Concrete.UserOrderRequest.Cancel;
+                dbContext.Orders.Update(order);
+                dbContext.SaveChanges();
+                // Adminlere bildirim gönder
+                var notificationService = HttpContext.RequestServices.GetService(typeof(ECommerce.API.Services.Abstract.INotificationService)) as ECommerce.API.Services.Abstract.INotificationService;
+                if (dbContext != null && notificationService != null)
+                {
+                    var adminUsers = dbContext.Users.Where(u => u.Role == ECommerce.API.Entities.Concrete.UserRole.Admin).ToList();
+                    foreach (var admin in adminUsers)
+                    {
+                        await notificationService.AddAsync(new ECommerce.API.DTO.NotificationDto
+                        {
+                            UserId = admin.Id,
+                            Message = $"Bir kullanıcı sipariş #{orderId} için iptal talebi oluşturdu.",
+                            IsRead = false,
+                            CreatedAt = DateTime.UtcNow
+                        });
+                    }
+                }
+                return Ok(new { message = "Sipariş iptal talebiniz alındı. Admin onayladığında iptal edilecek." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Kullanıcı siparişi iade etmek ister.
+        /// </summary>
+        [HttpPost("{orderId}/return")] // api/order/{orderId}/return
+        public async Task<IActionResult> ReturnOrder(int orderId)
+        {
+            try
+            {
+                // Sadece UserRequest alanını güncelle, status hemen değişmesin
+                var dbContext = HttpContext.RequestServices.GetService(typeof(ECommerce.API.Data.MyDbContext)) as ECommerce.API.Data.MyDbContext;
+                var order = dbContext?.Orders.FirstOrDefault(o => o.Id == orderId);
+                if (order == null)
+                    return BadRequest(new { message = "Sipariş bulunamadı." });
+                order.UserRequest = ECommerce.API.Entities.Concrete.UserOrderRequest.Return;
+                dbContext.Orders.Update(order);
+                dbContext.SaveChanges();
+                // Adminlere bildirim gönder
+                var notificationService = HttpContext.RequestServices.GetService(typeof(ECommerce.API.Services.Abstract.INotificationService)) as ECommerce.API.Services.Abstract.INotificationService;
+                if (dbContext != null && notificationService != null)
+                {
+                    var adminUsers = dbContext.Users.Where(u => u.Role == ECommerce.API.Entities.Concrete.UserRole.Admin).ToList();
+                    foreach (var admin in adminUsers)
+                    {
+                        await notificationService.AddAsync(new ECommerce.API.DTO.NotificationDto
+                        {
+                            UserId = admin.Id,
+                            Message = $"Bir kullanıcı sipariş #{orderId} için iade talebi oluşturdu.",
+                            IsRead = false,
+                            CreatedAt = DateTime.UtcNow
+                        });
+                    }
+                }
+                return Ok(new { message = "İade talebiniz alındı. Admin onayladığında süreç başlatılacak." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
         }
 

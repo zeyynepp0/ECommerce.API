@@ -35,6 +35,10 @@
        
         public DateTime CreatedAt { get; set; }
 
+        /// Yorumun güncellenme tarihi.
+       
+        public DateTime? UpdatedAt { get; set; }
+
         // Yorumun silinip silinmediği
         public bool IsDeleted { get; set; } = false;
         // Yorumun silinme zamanı (varsa)

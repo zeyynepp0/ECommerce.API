@@ -58,6 +58,11 @@ namespace ECommerce.API.Entities.Concrete
         public UserRole Role { get; set; }
 
         
+        /// Kullanıcının oluşturulma tarihi.
+       
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
+
+        
         /// Kullanıcının sahip olduğu adresler (1 User : N Address).
        
         public ICollection<Address> Addresses { get; set; } = new List<Address>();

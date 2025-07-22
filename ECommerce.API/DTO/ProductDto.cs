@@ -14,5 +14,6 @@ namespace ECommerce.API.DTO
         public double Rating { get; set; } // Ortalama puan
         public int ReviewCount { get; set; } // Yorum sayısı
         public string CategoryName { get; set; } // Kategori adı
+        public bool IsActive { get; set; }
     }
 } 
