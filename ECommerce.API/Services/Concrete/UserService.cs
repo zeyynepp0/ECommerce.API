@@ -1,6 +1,8 @@
-﻿using ECommerce.API.Entities.Concrete;
+﻿using ECommerce.API.DTO;
+using ECommerce.API.Entities.Concrete;
 using ECommerce.API.Repository.Abstract;
 using ECommerce.API.Services.Abstract;
+using BCrypt.Net;
 
 namespace ECommerce.API.Services.Concrete
 {
@@ -17,7 +19,7 @@ namespace ECommerce.API.Services.Concrete
        
         /// UserService constructor.
        
-        /// <param name="repo">Kullanıcı repository'si</param>
+       
         public UserService(IUserRepository repo)
         {
             _repo = repo;
@@ -52,22 +54,57 @@ namespace ECommerce.API.Services.Concrete
                 throw new Exception("Doğum tarihi bugünden ileri olamaz.");
             // Şifre hash'leme
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(user.PasswordHash);
+            // isActive default true veya gelen değeri kullan
+            user.IsActive = user.IsActive;
             await _repo.AddAsync(user);
             await _repo.SaveAsync();
         }
 
-       
+
         /// Var olan kullanıcıyı günceller.
-       
-        public async Task UpdateAsync(User user)
+
+        //public async Task UpdateAsync(User user)
+        //{
+        //    _repo.Update(user);
+        //    await _repo.SaveAsync();
+        //}
+
+        public async Task UpdateAsync(UpdateUserDto dto)
         {
+            var user = await _repo.GetByIdAsync(dto.Id);
+            if (user == null)
+                throw new Exception("Kullanıcı bulunamadı");
+
+            user.FirstName = dto.FirstName;
+            user.LastName = dto.LastName;
+            user.Email = dto.Email;
+            user.Phone = dto.Phone;
+
+            // string to enum dönüşümü
+            user.Role = Enum.Parse<UserRole>(dto.Role);
+
+            // Nullable tarih dönüşümü
+            user.BirthDate = dto.BirthDate ?? user.BirthDate;
+
+            // Şifre güncellemesi
+            if (!string.IsNullOrWhiteSpace(dto.Password))
+            {
+                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password);
+            }
+            else if (!string.IsNullOrWhiteSpace(dto.PasswordHash))
+            {
+                user.PasswordHash = dto.PasswordHash;
+            }
+            // Aktiflik güncellemesi
+            user.IsActive = dto.IsActive;
+
             _repo.Update(user);
             await _repo.SaveAsync();
         }
 
-       
+
         /// Id'ye göre kullanıcıyı siler (varsa).
-       
+
         public async Task DeleteAsync(int id)
         {
             var user = await _repo.GetByIdAsync(id);
@@ -83,7 +120,7 @@ namespace ECommerce.API.Services.Concrete
        
         public async Task<User?> AuthenticateAsync(string email, string password)
         {
-            var user = (await _repo.FindAsync(u => u.Email == email)).FirstOrDefault();
+            var user = (await _repo.FindAsync(u => u.Email.ToLower() == email.ToLower())).FirstOrDefault();
             if (user == null) return null;
             // BCrypt hash kontrolü
             if (!BCrypt.Net.BCrypt.Verify(password, user.PasswordHash)) return null;
@@ -98,6 +135,21 @@ namespace ECommerce.API.Services.Concrete
             var user = await _repo.GetByIdAsync(userId);
             if (user == null) throw new Exception("User not found");
             user.Role = Enum.Parse<UserRole>(role);
+            _repo.Update(user);
+            await _repo.SaveAsync();
+        }
+
+        public Task UpdateAsync(User user)
+        {
+            throw new NotImplementedException();
+        }
+
+        // Kullanıcıyı aktif/pasif yapar
+        public async Task SetActiveAsync(int userId, bool isActive)
+        {
+            var user = await _repo.GetByIdAsync(userId);
+            if (user == null) throw new Exception("Kullanıcı bulunamadı");
+            user.IsActive = isActive;
             _repo.Update(user);
             await _repo.SaveAsync();
         }

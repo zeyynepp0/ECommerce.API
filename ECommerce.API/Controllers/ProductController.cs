@@ -31,42 +31,40 @@ namespace ECommerce.API.Controllers
         [HttpGet("{id}")] // GET isteği, id parametresi ile
         public async Task<IActionResult> GetById(int id) => Ok(await _service.GetByIdAsync(id)); // İlgili ürünü getir
 
-        /*
-        // Yeni ürün ekler (kullanılmıyor, yerine AddProduct kullanılıyor)
-        [HttpPost]
-        public async Task<IActionResult> Add(Product product)
-        {
-            await _service.AddAsync(product);
-            return Ok();
-        }
-        */
+        
 
         // DTO ile yeni ürün ekler. Sadece Admin yetkisi gerektirir
         [HttpPost("add")] // POST isteği, add endpoint'i
         [Authorize(Roles = "Admin")] // Sadece Admin rolü erişebilir
         public async Task<IActionResult> AddProduct([FromBody] ProductDto dto)
         {
-            await _service.AddProductAsync(dto); // Ürünü ekle
-            return Ok("Ürün eklendi."); // Başarı mesajı döndür
+            try
+            {
+                await _service.AddProductAsync(dto); // Ürünü ekle
+                return Ok("Ürün eklendi."); // Başarı mesajı döndür
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message); // Hata mesajı ile birlikte 400 döndür
+            }
         }
 
-        /*
-        // Ürünü günceller (kullanılmıyor, yerine UpdateProduct kullanılıyor)
-        [HttpPut]
-        public async Task<IActionResult> Update(Product product)
-        {
-            await _service.UpdateAsync(product);
-            return Ok();
-        }
-        */
+     
 
         // DTO ile ürünü günceller. Sadece Admin yetkisi gerektirir
         [HttpPut("update/{id}")] // PUT isteği, update endpoint'i ve id parametresi
         [Authorize(Roles = "Admin")] // Sadece Admin rolü erişebilir
         public async Task<IActionResult> UpdateProduct(int id, [FromBody] UpdateProductDto dto)
         {
-            await _service.UpdateProductAsync(id, dto); // Ürünü güncelle
-            return Ok("Ürün güncellendi."); // Başarı mesajı döndür
+            try
+            {
+                await _service.UpdateProductAsync(id, dto); // Ürünü güncelle
+                return Ok("Ürün güncellendi."); // Başarı mesajı döndür
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message); // Hata mesajı ile birlikte 400 döndür
+            }
         }
 
         // Id'ye göre ürünü siler. Sadece Admin yetkisi gerektirir

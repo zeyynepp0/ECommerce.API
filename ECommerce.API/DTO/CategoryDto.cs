@@ -7,5 +7,6 @@ namespace ECommerce.API.DTO
         public int Id { get; set; } // Kategorinin benzersiz kimliği
         public string Name { get; set; } // Kategori adı
         public string ImageUrl { get; set; } // Kategoriye ait görselin URL'si
+        public bool IsActive { get; set; } // Kategori aktif mi?
     }
 } 

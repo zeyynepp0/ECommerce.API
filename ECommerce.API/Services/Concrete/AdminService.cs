@@ -130,7 +130,8 @@ namespace ECommerce.API.Services.Concrete
                 EmailConfirmed = u.EmailConfirmed, // E-posta onay durumu
                 BirthDate = u.BirthDate, // Doğum tarihi
                 OrderCount = u.Orders.Count(), // Sipariş sayısı
-                TotalSpent = u.Orders.Sum(o => o.TotalAmount) // Toplam harcama
+                TotalSpent = u.Orders.Sum(o => o.TotalAmount), // Toplam harcama
+                IsActive = u.IsActive // Aktiflik durumu
             }).ToList();
         }
 
@@ -210,36 +211,51 @@ namespace ECommerce.API.Services.Concrete
         }
 
         // Belirli bir döneme göre gelir raporu döndürür
-        public async Task<List<RevenueReportDto>> GetRevenueReportAsync(string period)
+        public async Task<List<RevenueReportDto>> GetRevenueReportAsync(string period, int? year, int? month)
         {
             var orders = await _context.Orders.ToListAsync();
             DateTime now = DateTime.Now;
             IEnumerable<Order> filteredOrders = orders;
 
+            // Yıl ve ay filtreleri
+            if (year.HasValue)
+                filteredOrders = filteredOrders.Where(o => o.OrderDate.Year == year.Value);
+            if (month.HasValue)
+                filteredOrders = filteredOrders.Where(o => o.OrderDate.Month == month.Value);
+
             switch (period?.ToLower())
             {
                 case "day":
-                    filteredOrders = orders.Where(o => o.OrderDate.Date == now.Date);
+                    filteredOrders = filteredOrders.Where(o => o.OrderDate.Date == now.Date);
                     break;
                 case "month":
-                    filteredOrders = orders.Where(o => o.OrderDate.Year == now.Year && o.OrderDate.Month == now.Month);
+                    // Zaten ay/yıl filtreleri uygulandıysa tekrar filtrelemeye gerek yok
                     break;
                 case "year":
-                    filteredOrders = orders.Where(o => o.OrderDate.Year == now.Year);
+                    // Zaten yıl filtresi uygulandıysa tekrar filtrelemeye gerek yok
                     break;
                 default:
                     // Tüm siparişler
                     break;
             }
 
+            // İptal edilen ve iade edilen siparişler
+            var cancelledOrders = filteredOrders.Where(o => o.Status == OrderStatus.Cancelled);
+            var refundedOrders = filteredOrders.Where(o => o.Status == OrderStatus.Refunded);
+            // Gerçek gelir: iptal ve iade edilenler hariç
+            var realRevenueOrders = filteredOrders.Where(o => o.Status != OrderStatus.Cancelled && o.Status != OrderStatus.Refunded);
+
             return new List<RevenueReportDto>
             {
                 new RevenueReportDto
                 {
-                    TotalRevenue = filteredOrders.Sum(o => o.TotalAmount),
+                    TotalRevenue = realRevenueOrders.Sum(o => o.TotalAmount),
                     OrderCount = filteredOrders.Count(),
-                    StartDate = period == "day" ? now.Date : (period == "month" ? new DateTime(now.Year, now.Month, 1) : (period == "year" ? new DateTime(now.Year, 1, 1) : (DateTime?)null)),
-                    EndDate = now
+                    StartDate = period == "day" ? now.Date : (period == "month" ? new DateTime(year ?? now.Year, month ?? now.Month, 1) : (period == "year" ? new DateTime(year ?? now.Year, 1, 1) : (DateTime?)null)),
+                    EndDate = now,
+                    CancelledRevenue = cancelledOrders.Sum(o => o.TotalAmount),
+                    RefundedRevenue = refundedOrders.Sum(o => o.TotalAmount),
+                    Period = period
                 }
             };
         }

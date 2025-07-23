@@ -81,6 +81,9 @@ namespace ECommerce.API.Entities.Concrete
         /// Kullanıcının favori ürünleri (1 User : N Favorite).
        
         public ICollection<Favorite> Favorites { get; set; } = new List<Favorite>();
+
+        /// Kullanıcının aktif olup olmadığını belirten özellik.
+        public bool IsActive { get; set; } = true;
     }
 
     

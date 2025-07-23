@@ -4,6 +4,7 @@ using ECommerce.API.Services.Abstract; // Servis arayüzleri
 using Microsoft.AspNetCore.Mvc; // ASP.NET Core MVC için temel sınıflar
 using ECommerce.API.Utilities; // JWT servis gibi yardımcı sınıflar
 using Microsoft.AspNetCore.Authorization; // Yetkilendirme işlemleri için
+using ECommerce.API.DTO;
 
 // Proje içindeki controller'ların bulunduğu namespace
 namespace ECommerce.API.Controllers
@@ -34,18 +35,64 @@ namespace ECommerce.API.Controllers
         // Tüm kullanıcıları getirir. Sadece Admin veya User yetkisi gerektirir.
         [HttpGet] // GET isteğiyle çalışır
         [Authorize(Roles = "Admin,User")] // Sadece Admin ve User rolleri erişebilir
-        public async Task<IActionResult> GetAll() => Ok(await _service.GetAllAsync()); // Tüm kullanıcıları getir ve döndür
+        public async Task<IActionResult> GetAll()
+        {
+            var users = await _service.GetAllAsync();
+            var dtos = users.Select(u => new UserDto
+            {
+                Id = u.Id,
+                FirstName = u.FirstName,
+                LastName = u.LastName,
+                Email = u.Email,
+                Phone = u.Phone,
+                Role = u.Role.ToString(),
+                EmailConfirmed = u.EmailConfirmed,
+                BirthDate = u.BirthDate,
+                OrderCount = u.Orders?.Count ?? 0,
+                TotalSpent = u.Orders?.Sum(o => o.TotalAmount) ?? 0,
+                IsActive = u.IsActive
+            }).ToList();
+            return Ok(dtos);
+        }
 
         // Id'ye göre kullanıcıyı getirir
         [HttpGet("{id}")] // GET isteği, id parametresi ile
-        public async Task<IActionResult> GetById(int id) => Ok(await _service.GetByIdAsync(id)); // İlgili kullanıcıyı getir
+        public async Task<IActionResult> GetById(int id)
+        {
+            var u = await _service.GetByIdAsync(id);
+            if (u == null) return NotFound();
+            var dto = new UserDto
+            {
+                Id = u.Id,
+                FirstName = u.FirstName,
+                LastName = u.LastName,
+                Email = u.Email,
+                Phone = u.Phone,
+                Role = u.Role.ToString(),
+                EmailConfirmed = u.EmailConfirmed,
+                BirthDate = u.BirthDate,
+                OrderCount = u.Orders?.Count ?? 0,
+                TotalSpent = u.Orders?.Sum(o => o.TotalAmount) ?? 0,
+                IsActive = u.IsActive
+            };
+            return Ok(dto);
+        }
 
         // Yeni kullanıcı ekler
         [HttpPost] // POST isteğiyle çalışır
         public async Task<IActionResult> Add([FromBody] User user)
         {
-            await _service.AddAsync(user); // Kullanıcıyı ekle
-            return Ok(user.Id); // Kullanıcı eklendikten sonra ID'yi döndür
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+            try
+            {
+                await _service.AddAsync(user); // Kullanıcıyı ekle
+                return Ok(user.Id); // Kullanıcı eklendikten sonra ID'yi döndür
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
         // Kullanıcı ekleme örnek JSON'u aşağıda açıklama olarak verilmiş
         //{
@@ -97,13 +144,41 @@ namespace ECommerce.API.Controllers
             return Ok(orders); // Siparişleri döndür
         }
 
-        // Kullanıcıyı günceller
-        [HttpPut] // PUT isteğiyle çalışır
-        public async Task<IActionResult> Update(User user)
+        // Kullanıcıyı aktif/pasif yapar
+        [HttpPost("set-active")]
+        public async Task<IActionResult> SetActive([FromBody] SetActiveRequest req)
         {
-            await _service.UpdateAsync(user); // Kullanıcıyı güncelle
-            return Ok(); // Başarılı ise 200 OK döndür
+            await _service.SetActiveAsync(req.Id, req.IsActive);
+            return Ok();
         }
+        public class SetActiveRequest
+        {
+            public int Id { get; set; }
+            public bool IsActive { get; set; }
+        }
+
+        //// Kullanıcıyı günceller
+        //[HttpPut] // PUT isteğiyle çalışır
+        //public async Task<IActionResult> Update(User user)
+        //{
+        //    await _service.UpdateAsync(user); // Kullanıcıyı güncelle
+        //    return Ok(); // Başarılı ise 200 OK döndür
+        //}
+
+        [HttpPut]
+        public async Task<IActionResult> Update([FromBody] UpdateUserDto dto)
+        {
+            try
+            {
+                await _service.UpdateAsync(dto);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
 
         // Id'ye göre kullanıcıyı siler
         [HttpDelete("{id}")] // DELETE isteği, id parametresi ile

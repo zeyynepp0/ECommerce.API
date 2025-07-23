@@ -50,8 +50,15 @@ namespace ECommerce.API.Controllers
         [Authorize(Roles = "Admin")] // Sadece Admin rolü erişebilir
         public async Task<IActionResult> UpdateCategory(int id, [FromBody] CategoryDto dto)
         {
-            await _service.UpdateCategoryAsync(id, dto); // Kategoriyi güncelle
-            return Ok("Kategori güncellendi."); // Başarı mesajı döndür
+            try
+            {
+                await _service.UpdateCategoryAsync(id, dto); // Kategoriyi güncelle
+                return Ok("Kategori güncellendi."); // Başarı mesajı döndür
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message); // Hata mesajı döndür
+            }
         }
 
         // Id'ye göre kategoriyi siler. Sadece Admin yetkisi gerektirir

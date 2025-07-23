@@ -93,9 +93,9 @@ namespace ECommerce.API.Controllers
         // Belirli bir döneme göre gelir raporu getirir. Sadece Admin yetkisi gerektirir
         [HttpGet("revenue")] // GET isteği, revenue endpoint'i
         [Authorize(Roles = "Admin")] // Sadece Admin rolü erişebilir
-        public async Task<IActionResult> GetRevenue([FromQuery] string period)
+        public async Task<IActionResult> GetRevenue([FromQuery] string period, [FromQuery] int? year, [FromQuery] int? month)
         {
-            var revenue = await _adminService.GetRevenueReportAsync(period); // Gelir raporunu getir
+            var revenue = await _adminService.GetRevenueReportAsync(period, year, month); // Gelir raporunu getir
             return Ok(revenue); // Sonucu döndür
         }
 
@@ -294,6 +294,15 @@ namespace ECommerce.API.Controllers
             dbContext.Orders.Update(order);
             dbContext.SaveChanges();
             return Ok(new { message = "Kullanıcı isteği reddedildi." });
+        }
+
+        // Yeni kullanıcı ekler. Sadece Admin yetkisi gerektirir
+        [HttpPost("users")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> AddUser([FromBody] User user)
+        {
+            await _userService.AddAsync(user);
+            return Ok(user);
         }
     }
 } 

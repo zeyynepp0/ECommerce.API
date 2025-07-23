@@ -1,4 +1,5 @@
 ﻿// Kullanıcı servis arayüzü ve gerekli kütüphaneler
+using ECommerce.API.DTO;
 using ECommerce.API.Entities.Concrete; // Kullanıcı varlık sınıfı
 
 namespace ECommerce.API.Services.Abstract
@@ -13,5 +14,8 @@ namespace ECommerce.API.Services.Abstract
         Task UpdateAsync(User user); // Kullanıcıyı günceller (asenkron)
         Task DeleteAsync(int id); // Id'ye göre kullanıcıyı siler (asenkron)
         Task<User?> AuthenticateAsync(string email, string password); // Kullanıcı girişini doğrular (asenkron)
+        Task UpdateAsync(UpdateUserDto dto);
+        Task SetActiveAsync(int userId, bool isActive);
+
     }
 }

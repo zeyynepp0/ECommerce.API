@@ -30,7 +30,8 @@ namespace ECommerce.API.Services.Concrete
             {
                 Id = c.Id,
                 Name = c.Name,
-                ImageUrl = c.ImageUrl
+                ImageUrl = c.ImageUrl,
+                IsActive = c.IsActive
             }).ToList();
         }
 
@@ -39,7 +40,7 @@ namespace ECommerce.API.Services.Concrete
         {
             var c = await _repo.GetByIdAsync(id);
             if (c == null) return null;
-            return new CategoryDto { Id = c.Id, Name = c.Name, ImageUrl = c.ImageUrl };
+            return new CategoryDto { Id = c.Id, Name = c.Name, ImageUrl = c.ImageUrl, IsActive = c.IsActive };
         }
 
         // --- Eski entity döndüren fonksiyonlar (gerekirse kullanılır) ---
@@ -81,7 +82,8 @@ namespace ECommerce.API.Services.Concrete
             var category = new Category
             {
                 Name = dto.Name, // Kategori adı
-                ImageUrl = dto.ImageUrl // Kategori görseli
+                ImageUrl = dto.ImageUrl, // Kategori görseli
+                IsActive = dto.IsActive
             };
             await _repo.AddAsync(category); // Kategoriyi ekle
             await _repo.SaveAsync(); // Değişiklikleri kaydet
@@ -93,8 +95,16 @@ namespace ECommerce.API.Services.Concrete
             var category = await _repo.GetByIdAsync(id); // Kategoriyi getir
             if (category != null)
             {
+                // Eğer kategoriyi pasif yapmak isteniyorsa ve aktif ürün varsa engelle
+                if (!dto.IsActive)
+                {
+                    var hasActiveProduct = await _context.Products.AnyAsync(p => p.CategoryId == id && p.IsActive);
+                    if (hasActiveProduct)
+                        throw new Exception("Bu kategoride aktif ürün(ler) varken kategori pasif yapılamaz.");
+                }
                 category.Name = dto.Name; // Adı güncelle
                 category.ImageUrl = dto.ImageUrl; // Görseli güncelle
+                category.IsActive = dto.IsActive; // Aktiflik durumunu güncelle
                 _repo.Update(category); // Kategoriyi güncelle
                 await _repo.SaveAsync(); // Değişiklikleri kaydet
             }

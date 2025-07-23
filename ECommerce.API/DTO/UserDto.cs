@@ -14,5 +14,6 @@ namespace ECommerce.API.DTO
         public DateTime? BirthDate { get; set; }
         public int OrderCount { get; set; }
         public decimal TotalSpent { get; set; }
+        public bool IsActive { get; set; }   // Kullanıcının aktiflik durumu
     }
 } 

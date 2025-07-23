@@ -24,5 +24,6 @@
         /// Kategoriye ait ürünler (1 Category : N Product).
        
         public ICollection<Product> Products { get; set; } = new List<Product>();
+        public bool IsActive { get; set; } = true;
     }
 }

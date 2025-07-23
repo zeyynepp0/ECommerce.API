@@ -10,5 +10,6 @@ namespace ECommerce.API.DTO
         public int Stock { get; set; } // Ürün stok miktarı
         public int CategoryId { get; set; } // Ürünün ait olduğu kategori ID'si
         public string ImageUrl { get; set; } = string.Empty; // Ürün görselinin URL'si
+        public bool IsActive { get; set; } // Ürün aktif mi?
     }
 } 

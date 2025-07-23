@@ -9,7 +9,7 @@ namespace ECommerce.API.Services.Abstract
     {
         Task UpdateOrderAdminStatusAsync(int orderId, Entities.Concrete.AdminOrderStatus adminStatus);
         Task<bool> UpdateAdminAsync(int adminId, UpdateAdminDto adminDto);
-        Task<List<RevenueReportDto>> GetRevenueReportAsync(string period);
+        Task<List<RevenueReportDto>> GetRevenueReportAsync(string period, int? year, int? month);
         Task<int> GetNewUsersCountAsync(int days);
         Task<List<UserActivityDto>> GetUserActivityAsync();
         Task<List<ReviewDto>> GetAllReviewsAsync();

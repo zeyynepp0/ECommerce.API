@@ -9,5 +9,7 @@ namespace ECommerce.API.DTO
         public string Period { get; set; } // Rapor dönemi (ör: daily, monthly, yearly)
         public DateTime? StartDate { get; set; } // Rapor başlangıç tarihi
         public DateTime EndDate { get; set; } // Rapor bitiş tarihi
+        public decimal CancelledRevenue { get; set; } // İptal edilen siparişlerin toplamı
+        public decimal RefundedRevenue { get; set; } // İade edilen siparişlerin toplamı
     }
 } 

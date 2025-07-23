@@ -47,7 +47,8 @@ namespace ECommerce.API.Services.Concrete
                     ImageUrl = product.ImageUrl,
                     Rating = rating,
                     ReviewCount = reviewCount,
-                    CategoryName = product.Category != null ? product.Category.Name : "Kategori Yok"
+                    CategoryName = product.Category != null ? product.Category.Name : "Kategori Yok",
+                    IsActive = product.IsActive
                 });
             }
             return productDtos;
@@ -76,7 +77,8 @@ namespace ECommerce.API.Services.Concrete
                 ImageUrl = product.ImageUrl,
                 Rating = rating,
                 ReviewCount = reviewCount,
-                CategoryName = product.Category != null ? product.Category.Name : "Kategori Yok"
+                CategoryName = product.Category != null ? product.Category.Name : "Kategori Yok",
+                IsActive = product.IsActive
             };
         }
 
@@ -112,9 +114,35 @@ namespace ECommerce.API.Services.Concrete
         }
 
         // Kategoriye göre ve bir ürünü hariç tutarak ürünleri getirir
-        public async Task<List<Product>> GetByCategoryIdAsync(int categoryId, int excludeProductId)
+        public async Task<List<ProductDto>> GetByCategoryIdAsync(int categoryId, int excludeProductId)
         {
-            return await _repo.GetByCategoryIdAsync(categoryId, excludeProductId).ContinueWith(t => t.Result.Where(p => p.IsActive).ToList());
+            var products = await _repo.GetByCategoryIdAsync(categoryId, excludeProductId);
+            var productDtos = new List<ProductDto>();
+            foreach (var product in products.Where(p => p.IsActive))
+            {
+                double rating = 0;
+                int reviewCount = 0;
+                if (product.Reviews != null && product.Reviews.Count > 0)
+                {
+                    rating = product.Reviews.Average(r => r.Rating);
+                    reviewCount = product.Reviews.Count;
+                }
+                productDtos.Add(new ProductDto
+                {
+                    Id = product.Id,
+                    Name = product.Name,
+                    Description = product.Description,
+                    Price = product.Price,
+                    Stock = product.StockQuantity,
+                    CategoryId = product.CategoryId,
+                    ImageUrl = product.ImageUrl,
+                    Rating = rating,
+                    ReviewCount = reviewCount,
+                    CategoryName = product.Category != null ? product.Category.Name : "Kategori Yok",
+                    IsActive = product.IsActive
+                });
+            }
+            return productDtos;
         }
 
         // ProductDto ile yeni ürün ekler. Aynı isimde ürün varsa hata fırlatır
@@ -131,7 +159,8 @@ namespace ECommerce.API.Services.Concrete
                 Price = dto.Price, // Ürün fiyatı
                 StockQuantity = dto.Stock, // Ürün stok miktarı
                 CategoryId = dto.CategoryId, // Kategori ID
-                ImageUrl = dto.ImageUrl // Ürün görseli
+                ImageUrl = dto.ImageUrl, // Ürün görseli
+                IsActive = dto.IsActive // Aktiflik durumu
             };
             await _repo.AddAsync(product); // Ürünü ekle
             await _repo.SaveAsync(); // Değişiklikleri kaydet
@@ -149,6 +178,7 @@ namespace ECommerce.API.Services.Concrete
             product.StockQuantity = dto.Stock; // Stok miktarını güncelle
             product.CategoryId = dto.CategoryId; // Kategori ID'yi güncelle
             product.ImageUrl = dto.ImageUrl; // Görseli güncelle
+            product.IsActive = dto.IsActive; // Aktiflik durumunu güncelle
 
             _repo.Update(product); // Ürünü güncelle
             await _repo.SaveAsync(); // Değişiklikleri kaydet
