@@ -188,7 +188,7 @@ namespace ECommerce.API.Controllers
                         await notificationService.AddAsync(new ECommerce.API.DTO.NotificationDto
                         {
                             UserId = order.UserId,
-                            Message = $"Siparişinizin durumu güncellendi: {status}",
+                            Message = $"Siparişinizin durumu güncellendi:#{order.Id} {status}",
                             IsRead = false,
                             CreatedAt = DateTime.UtcNow
                         });

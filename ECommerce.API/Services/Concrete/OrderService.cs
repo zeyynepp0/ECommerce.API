@@ -236,14 +236,14 @@ namespace ECommerce.API.Services.Concrete
                 // Bildirim gönder
                 string message = status switch
                 {
-                    OrderStatus.Approved => $"Siparişiniz satıcı tarafından onaylandı. Sipariş No: #{order.Id}",
-                    OrderStatus.Preparing => $"Siparişiniz hazırlanıyor. Sipariş No: #{order.Id}",
-                    OrderStatus.Shipped => $"Siparişiniz kargoya verildi. Sipariş No: #{order.Id}",
-                    OrderStatus.Delivered => $"Siparişiniz teslim edildi. Sipariş No: #{order.Id}",
-                    OrderStatus.Cancelled => $"Siparişiniz iptal edildi. Sipariş No: #{order.Id}",
-                    OrderStatus.Returned => $"İade talebiniz alındı. Sipariş No: #{order.Id}",
-                    OrderStatus.Refunded => $"İade işleminiz tamamlandı. Sipariş No: #{order.Id}",
-                    _ => $"Siparişinizin durumu güncellendi: {status}. Sipariş No: #{order.Id}"
+                    OrderStatus.Approved => $"Your order has been confirmed by the seller. Order No: {order.Id}",
+                    OrderStatus.Preparing => $"Your order is being prepared. Order No: {order.Id}",
+                    OrderStatus.Shipped => $"Your order has been shipped. Order No: {order.Id}",
+                    OrderStatus.Delivered => $"Your order has been delivered. Order No: {order.Id}",
+                    OrderStatus.Cancelled => $"Your order has been cancelled. Order No: {order.Id}",
+                    OrderStatus.Returned => $"Your return request has been received. Order No: {order.Id}",
+                    OrderStatus.Refunded => $"Your refund has been completed. Order No: {order.Id}",
+                    _ => $"Your order status has been updated: {status}. Order No: {order.Id}"
                 };
                 await _notificationService.AddAsync(new DTO.NotificationDto
                 {
