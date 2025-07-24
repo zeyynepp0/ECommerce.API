@@ -110,11 +110,18 @@ namespace ECommerce.API.Controllers
         [AllowAnonymous] // Herkes erişebilir
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            var user = await _service.AuthenticateAsync(request.Email, request.Password); // Kullanıcıyı doğrula
-            if (user == null) // Kullanıcı bulunamazsa
-                return Unauthorized("Geçersiz e-posta veya şifre."); // Yetkisiz hatası döndür
-            var token = _jwtService.GenerateToken(user.Id, user.Role); // JWT token üret
-            return Ok(new { token }); // Token'ı döndür
+            try
+            {
+                var user = await _service.AuthenticateAsync(request.Email, request.Password); // Kullanıcıyı doğrula
+                if (user == null) // Kullanıcı bulunamazsa
+                    return Unauthorized(new { message = "Geçersiz e-posta veya şifre." }); // Yetkisiz hatası döndür
+                var token = _jwtService.GenerateToken(user.Id, user.Role); // JWT token üret
+                return Ok(new { token }); // Token'ı döndür
+            }
+            catch (Exception ex)
+            {
+                return Unauthorized(new { message = ex.Message ?? "Bilinmeyen bir hata oluştu." });
+            }
         }
 
         // Kullanıcı için yeni sipariş oluşturur
@@ -179,6 +186,73 @@ namespace ECommerce.API.Controllers
             }
         }
 
+        // Şifremi unuttum endpoint'i
+        [HttpPost("forgot-password")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest req)
+        {
+            try
+            {
+                await _service.ForgotPasswordAsync(req.Email);
+                return Ok(new { message = "Şifre sıfırlama talimatı e-posta adresinize gönderildi." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // Şifre sıfırlama endpoint'i
+        [HttpPost("reset-password")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest req)
+        {
+            try
+            {
+                await _service.ResetPasswordAsync(req.Token, req.NewPassword);
+                return Ok(new { message = "Şifre başarıyla güncellendi." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // E-posta doğrulama endpoint'i
+        [HttpPost("verify-email")]
+        [AllowAnonymous]
+        public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailRequest req)
+        {
+            Console.WriteLine($"VerifyEmail: token={req.Token}");
+            var users = await _service.GetAllAsync();
+            var user = users.FirstOrDefault(u => u.EmailVerificationToken == req.Token && u.EmailVerificationTokenExpires > DateTime.UtcNow);
+            if (user == null)
+            {
+                Console.WriteLine("Kullanıcı bulunamadı veya token süresi dolmuş.");
+                return BadRequest(new { message = "Geçersiz veya süresi dolmuş doğrulama linki." });
+            }
+            Console.WriteLine($"Kullanıcı bulundu: {user.Email}, EmailConfirmed={user.EmailConfirmed}");
+            user.EmailConfirmed = true;
+            user.EmailVerificationToken = null;
+            user.EmailVerificationTokenExpires = null;
+            await _service.UpdateAsync(user);
+            Console.WriteLine($"Kullanıcı doğrulandı: {user.Email}");
+            return Ok(new { message = "E-posta adresiniz başarıyla doğrulandı." });
+        }
+        public class VerifyEmailRequest
+        {
+            public string Token { get; set; } = string.Empty;
+        }
+
+        public class ForgotPasswordRequest
+        {
+            public string Email { get; set; } = string.Empty;
+        }
+        public class ResetPasswordRequest
+        {
+            public string Token { get; set; } = string.Empty;
+            public string NewPassword { get; set; } = string.Empty;
+        }
 
         // Id'ye göre kullanıcıyı siler
         [HttpDelete("{id}")] // DELETE isteği, id parametresi ile

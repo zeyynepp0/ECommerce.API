@@ -84,6 +84,18 @@ namespace ECommerce.API.Entities.Concrete
 
         /// Kullanıcının aktif olup olmadığını belirten özellik.
         public bool IsActive { get; set; } = true;
+
+        /// Şifre sıfırlama token'ı (opsiyonel).
+        public string? PasswordResetToken { get; set; }
+
+        /// Şifre sıfırlama token'ının geçerlilik süresi (opsiyonel).
+        public DateTime? PasswordResetTokenExpires { get; set; }
+
+        /// E-posta doğrulama token'ı (opsiyonel).
+        public string? EmailVerificationToken { get; set; }
+
+        /// E-posta doğrulama token'ının geçerlilik süresi (opsiyonel).
+        public DateTime? EmailVerificationTokenExpires { get; set; }
     }
 
     

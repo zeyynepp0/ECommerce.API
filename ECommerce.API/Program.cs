@@ -54,6 +54,8 @@ builder.Services.AddScoped<INotificationService, NotificationService>();
 
 // JWT Service
 builder.Services.AddScoped<JwtService>();
+// Email Service
+builder.Services.AddScoped<EmailService>();
 
 // JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt");

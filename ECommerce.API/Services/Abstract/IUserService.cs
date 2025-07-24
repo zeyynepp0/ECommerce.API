@@ -17,5 +17,9 @@ namespace ECommerce.API.Services.Abstract
         Task UpdateAsync(UpdateUserDto dto);
         Task SetActiveAsync(int userId, bool isActive);
 
+        // Şifremi unuttum (token üretir ve kullanıcıya yollar)
+        Task ForgotPasswordAsync(string email);
+        // Şifre sıfırlama (token ve yeni şifre ile)
+        Task ResetPasswordAsync(string token, string newPassword);
     }
 }
