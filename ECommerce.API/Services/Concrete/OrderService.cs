@@ -35,6 +35,7 @@ namespace ECommerce.API.Services.Concrete
         {
             var o = await _repo.GetByIdAsync(id);
             if (o == null) return null;
+            var campaign = o.CampaignId.HasValue ? await _context.Campaigns.FindAsync(o.CampaignId.Value) : null;
             return new OrderDto
             {
                 Id = o.Id,
@@ -75,7 +76,10 @@ namespace ECommerce.API.Services.Concrete
                     ProductImage = oi.Product != null ? oi.Product.ImageUrl : string.Empty,
                     ProductDescription = oi.Product?.Description ?? string.Empty,
                     ProductCategory = oi.Product?.Category?.Name ?? string.Empty
-                }).ToList()
+                }).ToList(),
+                CampaignId = o.CampaignId,
+                CampaignName = campaign?.Name,
+                CampaignDiscount = o.CampaignDiscount
             };
         }
 
@@ -92,45 +96,51 @@ namespace ECommerce.API.Services.Concrete
                 .ToListAsync();
 
             // Entity -> DTO mapping
-            return orders.Select(o => new OrderDto
-            {
-                Id = o.Id,
-                UserId = o.UserId,
-                UserEmail = o.User?.Email ?? string.Empty,
-                CreatedAt = o.CreatedAt,
-                OrderDate = o.OrderDate,
-                Status = o.Status,
-                TotalAmount = o.TotalAmount,
-                ShippingCost = o.ShippingCost,
-                PaymentMethod = o.PaymentMethod,
-                DeliveryPersonName = o.DeliveryPersonName,
-                DeliveryPersonPhone = o.DeliveryPersonPhone,
-                ShippingCompanyId = o.ShippingCompanyId,
-                ShippingCompanyName = o.ShippingCompany?.Name ?? string.Empty,
-                AdminStatus = o.AdminStatus,
-                AddressId = o.AddressId,
-                Address = o.Address != null ? new AddressDto
+            return orders.Select(o => {
+                var campaign = o.CampaignId.HasValue ? _context.Campaigns.Find(o.CampaignId.Value) : null;
+                return new OrderDto
                 {
-                    Id = o.Address.Id,
-                    AddressTitle = o.Address.AddressTitle,
-                    Street = o.Address.Street,
-                    City = o.Address.City,
-                    State = o.Address.State,
-                    PostalCode = o.Address.PostalCode,
-                    Country = o.Address.Country,
-                    ContactName = o.Address.ContactName,
-                    ContactSurname = o.Address.ContactSurname,
-                    ContactPhone = o.Address.ContactPhone
-                } : null,
-                OrderItems = o.OrderItems.Select(oi => new OrderItemDto
-                {
-                    Id = oi.Id,
-                    ProductId = oi.ProductId,
-                    Quantity = oi.Quantity,
-                    UnitPrice = oi.UnitPrice,
-                    ProductName = oi.Product != null ? oi.Product.Name : string.Empty,
-                    ProductImage = oi.Product != null ? oi.Product.ImageUrl : string.Empty
-                }).ToList()
+                    Id = o.Id,
+                    UserId = o.UserId,
+                    UserEmail = o.User?.Email ?? string.Empty,
+                    CreatedAt = o.CreatedAt,
+                    OrderDate = o.OrderDate,
+                    Status = o.Status,
+                    TotalAmount = o.TotalAmount,
+                    ShippingCost = o.ShippingCost,
+                    PaymentMethod = o.PaymentMethod,
+                    DeliveryPersonName = o.DeliveryPersonName,
+                    DeliveryPersonPhone = o.DeliveryPersonPhone,
+                    ShippingCompanyId = o.ShippingCompanyId,
+                    ShippingCompanyName = o.ShippingCompany?.Name ?? string.Empty,
+                    AdminStatus = o.AdminStatus,
+                    AddressId = o.AddressId,
+                    Address = o.Address != null ? new AddressDto
+                    {
+                        Id = o.Address.Id,
+                        AddressTitle = o.Address.AddressTitle,
+                        Street = o.Address.Street,
+                        City = o.Address.City,
+                        State = o.Address.State,
+                        PostalCode = o.Address.PostalCode,
+                        Country = o.Address.Country,
+                        ContactName = o.Address.ContactName,
+                        ContactSurname = o.Address.ContactSurname,
+                        ContactPhone = o.Address.ContactPhone
+                    } : null,
+                    OrderItems = o.OrderItems.Select(oi => new OrderItemDto
+                    {
+                        Id = oi.Id,
+                        ProductId = oi.ProductId,
+                        Quantity = oi.Quantity,
+                        UnitPrice = oi.UnitPrice,
+                        ProductName = oi.Product != null ? oi.Product.Name : string.Empty,
+                        ProductImage = oi.Product != null ? oi.Product.ImageUrl : string.Empty
+                    }).ToList(),
+                    CampaignId = o.CampaignId,
+                    CampaignName = campaign?.Name,
+                    CampaignDiscount = o.CampaignDiscount
+                };
             }).ToList();
         }
 
@@ -155,7 +165,58 @@ namespace ECommerce.API.Services.Concrete
                 // Sipariş kalemlerinin toplamı hesaplanır
                 decimal itemsTotal = orderDto.OrderItems.Sum(i => i.UnitPrice * i.Quantity);
                 decimal shippingCost = itemsTotal > shippingCompany.FreeShippingLimit ? 0 : shippingCompany.Price;
-                decimal totalAmount = itemsTotal + shippingCost;
+
+                decimal campaignDiscount = 0;
+                string? campaignName = null;
+                if (orderDto.CampaignId.HasValue)
+                {
+                    var campaign = await _context.Campaigns
+                        .Include(c => c.CampaignProducts)
+                        .Include(c => c.CampaignCategories)
+                        .FirstOrDefaultAsync(c => c.Id == orderDto.CampaignId.Value);
+
+                    if (campaign != null)
+                    {
+                        campaignName = campaign.Name;
+                        // Kampanya kapsamındaki ürün id ve kategori id'leri
+                        var campaignProductIds = campaign.CampaignProducts.Select(cp => cp.ProductId).ToList();
+                        var campaignCategoryIds = campaign.CampaignCategories.Select(cc => cc.CategoryId).ToList();
+
+                        // Sepette kampanya kapsamındaki ürünler
+                        var campaignOrderItems = orderDto.OrderItems.Where(i =>
+                            campaignProductIds.Contains(i.ProductId) ||
+                            (campaignCategoryIds.Count > 0 && _context.Products.Any(p => p.Id == i.ProductId && campaignCategoryIds.Contains(p.CategoryId)))
+                        ).ToList();
+
+                        var campaignProductsTotal = campaignOrderItems.Sum(i => i.UnitPrice * i.Quantity);
+
+                        if (campaign.Type == CampaignType.PercentageDiscount)
+                        {
+                            campaignDiscount = (campaignProductsTotal * (campaign.Percentage ?? 0)) / 100;
+                        }
+                        else if (campaign.Type == CampaignType.AmountDiscount)
+                        {
+                            campaignDiscount = campaignProductsTotal > 0 ? (campaign.Amount ?? 0) : 0;
+                        }
+                        else if (campaign.Type == CampaignType.BuyXPayY)
+                        {
+                            // X al Y öde: En ucuz ürüne uygula, toplam adede göre
+                            var totalQuantity = campaignOrderItems.Sum(i => i.Quantity);
+                            var unitPrice = campaignOrderItems.OrderBy(i => i.UnitPrice).FirstOrDefault()?.UnitPrice ?? 0;
+                            var buy = campaign.BuyQuantity ?? 0;
+                            var pay = campaign.PayQuantity ?? 0;
+                            if (buy > 0 && pay > 0 && totalQuantity >= buy)
+                            {
+                                var setCount = totalQuantity / buy;
+                                campaignDiscount = setCount * (buy - pay) * unitPrice;
+                            }
+                        }
+                    }
+                }
+                decimal totalAmount = Math.Max(0, itemsTotal + shippingCost - campaignDiscount);
+
+                // DEBUG LOG
+                Console.WriteLine($"DEBUG: itemsTotal={itemsTotal}, shippingCost={shippingCost}, campaignDiscount={campaignDiscount}, totalAmount={totalAmount}, campaignId={orderDto.CampaignId}");
 
                 // Sipariş oluştur
                 var order = new Order
@@ -165,11 +226,15 @@ namespace ECommerce.API.Services.Concrete
                     ShippingCompanyId = orderDto.ShippingCompanyId, // Kargo firması ID
                     ShippingCost = shippingCost, // Kargo ücreti
                     PaymentMethod = orderDto.PaymentMethod, // Ödeme yöntemi
-                    TotalAmount = totalAmount, // Toplam tutar
+                    TotalAmount = totalAmount, // İndirimli toplam tutar
                     OrderDate = DateTime.Now, // Sipariş tarihi
                     Status = OrderStatus.Pending, // Sipariş durumu
                     DeliveryPersonName = orderDto.DeliveryPersonName, // Teslimat kişisi
-                    DeliveryPersonPhone = orderDto.DeliveryPersonPhone // Teslimat kişisi telefonu
+                    DeliveryPersonPhone = orderDto.DeliveryPersonPhone, // Teslimat kişisi telefonu
+                    CampaignId = orderDto.CampaignId,
+                    CampaignName = campaignName,
+                    CampaignDiscount = campaignDiscount,
+                    OrderNote = orderDto.OrderNote
                 };
 
                 await _context.Orders.AddAsync(order); // Siparişi ekle

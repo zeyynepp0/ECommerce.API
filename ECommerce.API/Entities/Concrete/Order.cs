@@ -80,5 +80,11 @@ namespace ECommerce.API.Entities.Concrete
         public int AddressId { get; set; }
         public Address Address { get; set; }
         public UserOrderRequest UserRequest { get; set; } = UserOrderRequest.None;
+
+        // Kampanya ile ilgili alanlar
+        public int? CampaignId { get; set; } // Uygulanan kampanya (opsiyonel)
+        public string? CampaignName { get; set; } // O anki kampanya adı (snapshot)
+        public decimal? CampaignDiscount { get; set; } // Uygulanan indirim tutarı (snapshot)
+        public string? OrderNote { get; set; } // Kullanıcı sipariş notu
     }
 }

@@ -34,6 +34,7 @@ builder.Services.AddScoped<IOrderItemRepository, OrderItemRepository>();
 builder.Services.AddScoped<IFavoriteRepository, FavoriteRepository>();
 builder.Services.AddScoped<IShippingCompanyRepository, ShippingCompanyRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+builder.Services.AddScoped<ICampaignRepository, CampaignRepository>();
 
 // Services
 builder.Services.AddScoped<IAddressService, AddressService>();
@@ -50,6 +51,7 @@ builder.Services.AddScoped<IAddressRepository, AddressRepository>();
 builder.Services.AddScoped<IFavoriteService, FavoriteService>();
 builder.Services.AddScoped<IShippingCompanyService, ShippingCompanyService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<ICampaignService, CampaignService>();
 
 
 // JWT Service

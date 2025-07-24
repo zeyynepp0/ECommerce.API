@@ -146,47 +146,58 @@ namespace ECommerce.API.Services.Concrete
                 .Include(o => o.User)
                 .ToListAsync();
 
-            return orders.Select(o => new OrderDto
-            {
-                Id = o.Id,
-                UserId = o.UserId,
-                UserEmail = o.User?.Email ?? string.Empty,
-                CreatedAt = o.CreatedAt,
-                OrderDate = o.OrderDate,
-                Status = o.Status,
-                TotalAmount = o.TotalAmount,
-                ShippingCost = o.ShippingCost,
-                PaymentMethod = o.PaymentMethod,
-                DeliveryPersonName = o.DeliveryPersonName,
-                DeliveryPersonPhone = o.DeliveryPersonPhone,
-                ShippingCompanyId = o.ShippingCompanyId,
-                ShippingCompanyName = o.ShippingCompany?.Name ?? string.Empty,
-                AdminStatus = o.AdminStatus,
-                AddressId = o.AddressId,
-                Address = o.Address != null ? new AddressDto
+            return orders.Select(o => {
+                var campaign = o.CampaignId.HasValue ? _context.Campaigns.Find(o.CampaignId.Value) : null;
+                return new OrderDto
                 {
-                    Id = o.Address.Id,
-                    AddressTitle = o.Address.AddressTitle,
-                    Street = o.Address.Street,
-                    City = o.Address.City,
-                    State = o.Address.State,
-                    PostalCode = o.Address.PostalCode,
-                    Country = o.Address.Country,
-                    ContactName = o.Address.ContactName,
-                    ContactSurname = o.Address.ContactSurname,
-                    ContactPhone = o.Address.ContactPhone
-                } : null,
-                OrderItems = o.OrderItems.Select(oi => new OrderItemDto
-                {
-                    Id = oi.Id,
-                    ProductId = oi.ProductId,
-                    Quantity = oi.Quantity,
-                    UnitPrice = oi.UnitPrice,
-                    ProductName = oi.Product != null ? oi.Product.Name : string.Empty,
-                    ProductImage = oi.Product != null ? oi.Product.ImageUrl : string.Empty
-                }).ToList(),
-                UserRequest = o.UserRequest
-                // UserRequestText ataması kaldırıldı
+                    Id = o.Id,
+                    UserId = o.UserId,
+                    UserEmail = o.User?.Email ?? string.Empty,
+                    CreatedAt = o.CreatedAt,
+                    OrderDate = o.OrderDate,
+                    Status = o.Status,
+                    TotalAmount = o.TotalAmount,
+                    ShippingCost = o.ShippingCost,
+                    PaymentMethod = o.PaymentMethod,
+                    DeliveryPersonName = o.DeliveryPersonName,
+                    DeliveryPersonPhone = o.DeliveryPersonPhone,
+                    ShippingCompanyId = o.ShippingCompanyId,
+                    ShippingCompanyName = o.ShippingCompany?.Name ?? string.Empty,
+                    AdminStatus = o.AdminStatus,
+                    AddressId = o.AddressId,
+                    Address = o.Address != null ? new AddressDto
+                    {
+                        Id = o.Address.Id,
+                        AddressTitle = o.Address.AddressTitle,
+                        Street = o.Address.Street,
+                        City = o.Address.City,
+                        State = o.Address.State,
+                        PostalCode = o.Address.PostalCode,
+                        Country = o.Address.Country,
+                        ContactName = o.Address.ContactName,
+                        ContactSurname = o.Address.ContactSurname,
+                        ContactPhone = o.Address.ContactPhone
+                    } : null,
+                    OrderItems = o.OrderItems.Select(oi => new OrderItemDto
+                    {
+                        Id = oi.Id,
+                        ProductId = oi.ProductId,
+                        Quantity = oi.Quantity,
+                        UnitPrice = oi.UnitPrice,
+                        ProductName = oi.Product != null ? oi.Product.Name : string.Empty,
+                        ProductImage = oi.Product != null ? oi.Product.ImageUrl : string.Empty
+                    }).ToList(),
+                    UserRequest = o.UserRequest,
+                    CampaignId = o.CampaignId,
+                    CampaignName = campaign?.Name,
+                    CampaignDiscount = campaign != null
+                        ? (campaign.Type == CampaignType.PercentageDiscount
+                            ? (o.TotalAmount * campaign.Percentage / 100)
+                            : (campaign.Type == CampaignType.AmountDiscount
+                                ? campaign.Amount
+                                : null))
+                        : null
+                };
             }).ToList();
         }
 

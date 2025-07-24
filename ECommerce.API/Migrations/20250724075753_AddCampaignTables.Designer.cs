@@ -4,6 +4,7 @@ using ECommerce.API.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ECommerce.API.Migrations
 {
     [DbContext(typeof(MyDbContext))]
-    partial class MyDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250724075753_AddCampaignTables")]
+    partial class AddCampaignTables
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -110,12 +113,6 @@ namespace ECommerce.API.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<decimal?>("Amount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int?>("BuyQuantity")
-                        .HasColumnType("int");
-
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -126,24 +123,21 @@ namespace ECommerce.API.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
-                    b.Property<decimal?>("MinOrderAmount")
+                    b.Property<decimal?>("MinAmount")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("PayQuantity")
-                        .HasColumnType("int");
-
-                    b.Property<decimal?>("Percentage")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("datetime2");
 
                     b.Property<int>("Type")
                         .HasColumnType("int");
+
+                    b.Property<decimal>("Value")
+                        .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
 
@@ -638,7 +632,7 @@ namespace ECommerce.API.Migrations
                         .IsRequired();
 
                     b.HasOne("ECommerce.API.Entities.Concrete.Category", "Category")
-                        .WithMany()
+                        .WithMany("CampaignCategories")
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -657,7 +651,7 @@ namespace ECommerce.API.Migrations
                         .IsRequired();
 
                     b.HasOne("ECommerce.API.Entities.Concrete.Product", "Product")
-                        .WithMany()
+                        .WithMany("CampaignProducts")
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -809,6 +803,8 @@ namespace ECommerce.API.Migrations
 
             modelBuilder.Entity("ECommerce.API.Entities.Concrete.Category", b =>
                 {
+                    b.Navigation("CampaignCategories");
+
                     b.Navigation("Products");
                 });
 
@@ -819,6 +815,8 @@ namespace ECommerce.API.Migrations
 
             modelBuilder.Entity("ECommerce.API.Entities.Concrete.Product", b =>
                 {
+                    b.Navigation("CampaignProducts");
+
                     b.Navigation("Favorites");
 
                     b.Navigation("Reviews");

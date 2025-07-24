@@ -29,6 +29,10 @@ namespace ECommerce.API.DTO
         public string StatusText => Status.ToDisplayString();
         public UserOrderRequest UserRequest { get; set; } = UserOrderRequest.None;
         public string UserRequestText => UserRequest == UserOrderRequest.Cancel ? "İptal Talebi" : UserRequest == UserOrderRequest.Return ? "İade Talebi" : "Yok";
+        public int? CampaignId { get; set; }
+        public string? CampaignName { get; set; }
+        public decimal? CampaignDiscount { get; set; }
+        public string? OrderNote { get; set; } // Kullanıcı sipariş notu
     }
 
     // Sipariş kalemi verilerini taşımak için kullanılan DTO sınıfı
