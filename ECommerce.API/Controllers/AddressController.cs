@@ -88,5 +88,15 @@ namespace ECommerce.API.Controllers
             await _service.DeleteAsync(id); // Adresi sil
             return Ok(); // Başarılı ise 200 OK döndür
         }
+
+
+        [HttpGet("test-exception")]
+        public IActionResult TestException()
+        {
+            // Bilerek bir NullReferenceException fırlat
+            string test = null;
+            var length = test.Length; // Bu satır patlayacak
+            return Ok();
+        }
     }
 } 
