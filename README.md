@@ -1,7 +1,6 @@
 <[E-Commerce Diagram.pdf](https://github.com/user-attachments/files/21543440/E-Commerce.Diagram.pdf)
 <img width="1342" height="690" alt="image" src="https://github.com/user-attachments/assets/d4bef7e4-fe26-4049-a3db-5f77624c0e87" />
-
-img width="1682" height="759" alt="Ekran görüntüsü 2025-07-28 091146" src="https://github.com/user-attachments/assets/e9b8fb94-6f73-4499-81f1-7914024d28d2" />
+<img width="1682" height="759" alt="Ekran görüntüsü 2025-07-28 091146" src="https://github.com/user-attachments/assets/e9b8fb94-6f73-4499-81f1-7914024d28d2" />
 <img width="1234" height="830" alt="Ekran görüntüsü 2025-07-28 091127" src="https://github.com/user-attachments/assets/57f68189-1de9-45c2-8405-9f175d7d8774" />
 <img width="1641" height="490" alt="Ekran görüntüsü 2025-07-28 091053" src="https://github.com/user-attachments/assets/0da0f50d-e5dc-45fa-a496-0731f67c1d67" />
 <img width="1620" height="488" alt="Ekran görüntüsü 2025-07-28 091206" src="https://github.com/user-attachments/assets/709497d0-09d0-48fb-87cf-b0c887bf4e6c" />
