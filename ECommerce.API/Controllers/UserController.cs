@@ -114,13 +114,13 @@ namespace ECommerce.API.Controllers
             {
                 var user = await _service.AuthenticateAsync(request.Email, request.Password); // Kullanıcıyı doğrula
                 if (user == null) // Kullanıcı bulunamazsa
-                    return Unauthorized(new { message = "Geçersiz e-posta veya şifre." }); // Yetkisiz hatası döndür
+                    return Unauthorized(new { message = "Invalid email or password." }); // Yetkisiz hatası döndür
                 var token = _jwtService.GenerateToken(user.Id, user.Role); // JWT token üret
                 return Ok(new { token }); // Token'ı döndür
             }
             catch (Exception ex)
             {
-                return Unauthorized(new { message = ex.Message ?? "Bilinmeyen bir hata oluştu." });
+                return Unauthorized(new { message = ex.Message ?? "An unknown error occurred." });
             }
         }
 
@@ -164,13 +164,7 @@ namespace ECommerce.API.Controllers
             public bool IsActive { get; set; }
         }
 
-        //// Kullanıcıyı günceller
-        //[HttpPut] // PUT isteğiyle çalışır
-        //public async Task<IActionResult> Update(User user)
-        //{
-        //    await _service.UpdateAsync(user); // Kullanıcıyı güncelle
-        //    return Ok(); // Başarılı ise 200 OK döndür
-        //}
+       
 
         [HttpPut]
         public async Task<IActionResult> Update([FromBody] UpdateUserDto dto)
@@ -194,7 +188,7 @@ namespace ECommerce.API.Controllers
             try
             {
                 await _service.ForgotPasswordAsync(req.Email);
-                return Ok(new { message = "Şifre sıfırlama talimatı e-posta adresinize gönderildi." });
+                return Ok(new { message = "Password reset instructions have been sent to your email address." });
             }
             catch (Exception ex)
             {
@@ -228,16 +222,16 @@ namespace ECommerce.API.Controllers
             var user = users.FirstOrDefault(u => u.EmailVerificationToken == req.Token && u.EmailVerificationTokenExpires > DateTime.UtcNow);
             if (user == null)
             {
-                Console.WriteLine("Kullanıcı bulunamadı veya token süresi dolmuş.");
-                return BadRequest(new { message = "Geçersiz veya süresi dolmuş doğrulama linki." });
+                Console.WriteLine("User not found or token expired.");
+                return BadRequest(new { message = "Invalid or expired verification link." });
             }
-            Console.WriteLine($"Kullanıcı bulundu: {user.Email}, EmailConfirmed={user.EmailConfirmed}");
+            Console.WriteLine($"User found: {user.Email}, EmailConfirmed={user.EmailConfirmed}");
             user.EmailConfirmed = true;
             user.EmailVerificationToken = null;
             user.EmailVerificationTokenExpires = null;
             await _service.UpdateAsync(user);
-            Console.WriteLine($"Kullanıcı doğrulandı: {user.Email}");
-            return Ok(new { message = "E-posta adresiniz başarıyla doğrulandı." });
+            Console.WriteLine($"User verified: {user.Email}");
+            return Ok(new { message = "Your email address has been verified successfully." });
         }
         public class VerifyEmailRequest
         {

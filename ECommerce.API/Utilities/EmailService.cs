@@ -29,11 +29,11 @@ namespace ECommerce.API.Utilities
                 await smtp.AuthenticateAsync(_config["EmailSettings:SmtpUser"], _config["EmailSettings:SmtpPass"]);
                 await smtp.SendAsync(email);
                 await smtp.DisconnectAsync(true);
-                Console.WriteLine($"Mail gönderildi: {to}");
+                Console.WriteLine($"Email sent: {to}");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Mail gönderme hatası: {ex.Message}\n{ex.StackTrace}");
+                Console.WriteLine($"Email sending error: {ex.Message}\n{ex.StackTrace}");
                 throw; // Hata üst katmana da iletilsin
             }
         }
@@ -41,8 +41,8 @@ namespace ECommerce.API.Utilities
         public async Task SendVerificationEmailAsync(string to, string token)
         {
             string verifyUrl = $"http://localhost:5173/verify-email?token={token}";
-            string body = $"Hesabınızı doğrulamak için <a href='{verifyUrl}'>buraya tıklayın</a>.<br/>Veya bu linki tarayıcınıza yapıştırın: {verifyUrl}";
-            await SendEmailAsync(to, "E-posta Doğrulama", body);
+            string body = $"To verify your account <a href='{verifyUrl}'>Click here</a>.<br/>Or paste this link into your browser: {verifyUrl}";
+            await SendEmailAsync(to, "Email Verification", body);
         }
     }
 } 

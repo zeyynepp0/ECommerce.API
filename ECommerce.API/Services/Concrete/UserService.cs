@@ -48,10 +48,10 @@ namespace ECommerce.API.Services.Concrete
             // E-posta benzersizliği kontrolü
             var existing = await _repo.GetByEmailAsync(user.Email);
             if (existing != null)
-                throw new Exception("Bu e-posta ile zaten bir kullanıcı var.");
+                throw new Exception("There is already a user with this email address.");
             // Doğum tarihi kontrolü
             if (user.BirthDate > DateTime.Now)
-                throw new Exception("Doğum tarihi bugünden ileri olamaz.");
+                throw new Exception("Date of birth cannot be later than today.");
             // Şifre hash'leme
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(user.PasswordHash);
             // isActive default true veya gelen değeri kullan
@@ -134,7 +134,7 @@ namespace ECommerce.API.Services.Concrete
                 _repo.Update(user);
                 await _repo.SaveAsync();
                 await _emailService.SendVerificationEmailAsync(user.Email, token);
-                throw new Exception("E-posta adresiniz doğrulanmamış. Doğrulama linki e-posta adresinize gönderildi.");
+                throw new Exception("Your email address is not verified. A verification link has been sent to your email address.");
             }
             return user;
         }
@@ -155,7 +155,7 @@ namespace ECommerce.API.Services.Concrete
         public async Task SetActiveAsync(int userId, bool isActive)
         {
             var user = await _repo.GetByIdAsync(userId);
-            if (user == null) throw new Exception("Kullanıcı bulunamadı");
+            if (user == null) throw new Exception("User not found");
             user.IsActive = isActive;
             _repo.Update(user);
             await _repo.SaveAsync();
@@ -166,7 +166,7 @@ namespace ECommerce.API.Services.Concrete
         {
             var user = await _repo.GetByEmailAsync(email);
             if (user == null)
-                throw new Exception("Bu e-posta ile kayıtlı kullanıcı bulunamadı.");
+                throw new Exception("No users registered with this email address were found.");
             // Token üret
             var token = Guid.NewGuid().ToString("N");
             user.PasswordResetToken = token;
@@ -174,8 +174,8 @@ namespace ECommerce.API.Services.Concrete
             _repo.Update(user);
             await _repo.SaveAsync();
             string resetUrl = $"http://localhost:5173/reset-password?token={token}";
-            string body = $"Şifrenizi sıfırlamak için <a href='{resetUrl}'>buraya tıklayın</a>.<br/>Veya bu linki tarayıcınıza yapıştırın: {resetUrl}";
-            await _emailService.SendEmailAsync(user.Email, "Şifre Sıfırlama", body);
+            string body = $"To reset your password <a href='{resetUrl}'>Click here</a>.<br/>Or paste this link into your browser: {resetUrl}";
+            await _emailService.SendEmailAsync(user.Email, "Password Reset", body);
         }
 
         // Şifre sıfırlama: Token ve yeni şifre ile
@@ -184,7 +184,7 @@ namespace ECommerce.API.Services.Concrete
             var users = await _repo.FindAsync(u => u.PasswordResetToken == token && u.PasswordResetTokenExpires > DateTime.UtcNow);
             var user = users.FirstOrDefault();
             if (user == null)
-                throw new Exception("Geçersiz veya süresi dolmuş token.");
+                throw new Exception("Invalid or expired token.");
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
             user.PasswordResetToken = null;
             user.PasswordResetTokenExpires = null;
